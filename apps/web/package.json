@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "echo \"web: lint passed\"",
+    "lint": "eslint app",
     "typecheck": "tsc --noEmit",
     "test": "echo \"web: unit tests pending for components in Task 3\"",
     "test:e2e": "echo \"web: e2e tests pending for Task 3\""

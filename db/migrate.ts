@@ -38,7 +38,6 @@ export async function runMigrations(dir = path.join(process.cwd(), 'db/migration
       }
 
       const sql = fs.readFileSync(path.join(dir, file), 'utf-8');
-      // eslint-disable-next-line no-console
       console.log(`Applying migration: ${file}...`);
       await client.query('BEGIN');
       try {
@@ -63,12 +62,10 @@ export async function runMigrations(dir = path.join(process.cwd(), 'db/migration
 if (process.argv[1]?.endsWith('migrate.ts') || process.argv[1]?.endsWith('migrate.js')) {
   runMigrations()
     .then((applied) => {
-      // eslint-disable-next-line no-console
       console.log(`Migrations complete. Applied: ${applied.length}`);
       process.exit(0);
     })
     .catch((err) => {
-      // eslint-disable-next-line no-console
       console.error('Migration failed:', err);
       process.exit(1);
     });

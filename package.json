@@ -5,13 +5,13 @@
   "description": "Nuvora SaaS — Facturación Electrónica y Contabilidad Básica para Colombia",
   "engines": {
     "node": ">=22.0.0",
-    "pnpm": ">=9.0.0"
+    "pnpm": "12.5.1"
   },
   "packageManager": "pnpm@12.5.1",
   "scripts": {
     "lint": "pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",
-    "test": "pnpm -r --if-present run test",
+    "test": "pnpm -r --if-present run test && vitest run tests/architecture",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "pnpm -r --if-present run test:e2e",
     "build": "pnpm -r --if-present run build",
@@ -21,9 +21,11 @@
     "@nestjs/common": "^12.0.3",
     "@nestjs/core": "^12.0.3",
     "@types/pg": "^8.23.1",
+    "eslint": "^10.11.0",
     "pg": "^8.23.0",
     "tsx": "^4.23.15",
     "typescript": "^5.7.3",
+    "typescript-eslint": "^8.70.0",
     "vitest": "^5.0.1"
   }
 }

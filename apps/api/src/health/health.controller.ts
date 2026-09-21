@@ -1,11 +1,21 @@
-import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { HealthService } from './health.service.js';
 
 export interface HealthResponse {
-  status: 'ok';
+  status: 'ok' | 'error';
 }
 
 @Controller('health')
 export class HealthController {
+  constructor(@Inject(HealthService) private readonly healthService: HealthService) {}
+
   @Get('live')
   @HttpCode(HttpStatus.OK)
   getLive(): HealthResponse {
@@ -14,9 +24,11 @@ export class HealthController {
 
   @Get('ready')
   @HttpCode(HttpStatus.OK)
-  getReady(): HealthResponse {
-    // In Task 1 foundation, API checks baseline process readiness.
-    // Infrastructure deep connectivity check will be wired when DB connection pool is introduced in Task 2.
+  async getReady(): Promise<HealthResponse> {
+    const isDbReady = await this.healthService.checkDatabase();
+    if (!isDbReady) {
+      throw new ServiceUnavailableException({ status: 'error' });
+    }
     return { status: 'ok' };
   }
 }

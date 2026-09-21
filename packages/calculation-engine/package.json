@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"@nuvora/calculation-engine: lint passed\"",
+    "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest run"
   },
   "dependencies": {

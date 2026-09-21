@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import pg from 'pg';
 import { withTenant } from '../../apps/api/src/tenancy/tenant-transaction.js';
 import type { RequestContext } from '../../apps/api/src/tenancy/tenant-context.js';
@@ -228,10 +228,7 @@ describe('Tenant Isolation & PostgreSQL RLS Integration Tests (Ruling B1)', () =
     };
 
     // Spy on reflector to require 'invoices.create'
-    reflector.getAllAndOverride = ((key: string) => {
-      if (key === 'required_permission') return 'invoices.create';
-      return undefined;
-    }) as any;
+    vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue('invoices.create');
 
     // Tenant A has 'invoices.create' -> should pass
     const executionCtxA = mockExecutionContext(ctxTenantA);

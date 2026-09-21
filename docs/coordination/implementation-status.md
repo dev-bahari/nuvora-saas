@@ -2,11 +2,11 @@
 
 ## Current gate
 
-- Phase: Foundation (Task 2 complete)
-- Architecture gate: APPROVED (preflight-architecture.md)
-- Platform gate: APPROVED (tenant-isolation.spec.ts & FORCE RLS)
+- Phase: Foundation (Task 1 QA Remediation Applied; Task 2 Completed)
+- Architecture gate: APPROVED (docs/coordination/preflight-architecture.md)
+- Platform gate: APPROVED (tests/integration/tenant-isolation.spec.ts & FORCE RLS)
 - Integration gate: pending
-- QA gate: pending
+- QA gate: REMEDIATION_COMPLETE (awaiting final QA verification)
 
 ## Active ownership
 

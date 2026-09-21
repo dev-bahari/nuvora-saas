@@ -9,7 +9,7 @@
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"api: lint passed\"",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "vitest run",
     "test:integration": "echo \"api: integration tests pending for Task 2\"",
     "test:e2e": "echo \"api: e2e tests pending for Task 3\""

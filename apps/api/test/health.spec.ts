@@ -1,10 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from '../src/app.module.js';
+import { HealthService } from '../src/health/health.service.js';
 
 describe('Health Endpoints (HTTP Contract)', () => {
   let app: NestFastifyApplication;
+  let healthService: HealthService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -14,6 +16,7 @@ describe('Health Endpoints (HTTP Contract)', () => {
     app = moduleFixture.createNestApplication<NestFastifyApplication>(
       new FastifyAdapter(),
     );
+    healthService = moduleFixture.get<HealthService>(HealthService);
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
   });
@@ -35,7 +38,7 @@ describe('Health Endpoints (HTTP Contract)', () => {
     expect(body).toEqual({ status: 'ok' });
   });
 
-  it('GET /health/ready returns 200 with exact status ok body', async () => {
+  it('GET /health/ready returns 200 when database dependency is healthy', async () => {
     const response = await app.inject({
       method: 'GET',
       url: '/health/ready',
@@ -44,5 +47,24 @@ describe('Health Endpoints (HTTP Contract)', () => {
     expect(response.statusCode).toBe(200);
     const body = JSON.parse(response.payload);
     expect(body).toEqual({ status: 'ok' });
+  });
+
+  it('GET /health/ready returns 503 with status error when database is disconnected', async () => {
+    // Simulate database outage
+    const spy = vi.spyOn(healthService, 'checkDatabase').mockResolvedValueOnce(false);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/health/ready',
+    });
+
+    expect(response.statusCode).toBe(503);
+    const body = JSON.parse(response.payload);
+    expect(body.status).toBe('error');
+    // Ensure no internal exceptions, DSN, or stack traces leaked
+    expect(body).not.toHaveProperty('database');
+    expect(body).not.toHaveProperty('stack');
+
+    spy.mockRestore();
   });
 });

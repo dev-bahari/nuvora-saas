@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"@nuvora/contracts: lint passed\"",
+    "lint": "eslint \"src/**/*.ts\"",
     "test": "echo \"@nuvora/contracts: no unit tests for empty boundary\""
   },
   "dependencies": {
