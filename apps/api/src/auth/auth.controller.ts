@@ -86,6 +86,7 @@ export class AuthController {
   ) {
     const rawToken = parseCookie(req.headers['cookie'], COOKIE_NAME);
     if (rawToken) {
+      await this.authService.validateCsrf(rawToken, req.headers['x-csrf-token'] as string ?? '');
       await this.authService.logout(rawToken);
     }
     clearSessionCookies(reply);
@@ -115,7 +116,14 @@ export class AuthController {
 
   @Post('password/request')
   @HttpCode(HttpStatus.OK)
-  async requestPasswordReset(@Body() body: { email: string }) {
+  async requestPasswordReset(
+    @Body() body: { email: string },
+    @Req() req: FastifyRequest,
+  ) {
+    const rawToken = parseCookie(req.headers['cookie'], COOKIE_NAME);
+    if (rawToken) {
+      await this.authService.validateCsrf(rawToken, req.headers['x-csrf-token'] as string ?? '');
+    }
     await this.authService.requestPasswordReset(body.email);
     return { ok: true }; // always 200 — no enumeration
   }
@@ -124,8 +132,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async resetPassword(
     @Body() body: { token: string; newPassword: string },
+    @Req() req: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
+    const rawToken = parseCookie(req.headers['cookie'], COOKIE_NAME);
+    if (rawToken) {
+      await this.authService.validateCsrf(rawToken, req.headers['x-csrf-token'] as string ?? '');
+    }
     await this.authService.resetPassword(body.token, body.newPassword);
     clearSessionCookies(reply);
     return { ok: true };
@@ -138,6 +151,11 @@ export class AuthController {
     @Req() req: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
+    const rawToken = parseCookie(req.headers['cookie'], COOKIE_NAME);
+    if (rawToken) {
+      await this.authService.validateCsrf(rawToken, req.headers['x-csrf-token'] as string ?? '');
+    }
+
     const ip = req.ip;
     const result = await this.onboardingService.onboard(
       body.email,

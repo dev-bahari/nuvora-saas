@@ -27,5 +27,5 @@ CREATE TABLE IF NOT EXISTS auth_rate_limits (
 -- Grant DELETE on sessions to allow logout via nuvora_app_user
 GRANT DELETE ON sessions TO nuvora_app_user;
 GRANT SELECT, INSERT, UPDATE ON password_reset_tokens TO nuvora_app_user;
-GRANT SELECT, INSERT, UPDATE ON auth_rate_limits TO nuvora_app_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON auth_rate_limits TO nuvora_app_user;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO nuvora_app_user;

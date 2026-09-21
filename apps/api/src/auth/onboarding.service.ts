@@ -29,16 +29,6 @@ export class OnboardingService {
     ip?: string,
   ): Promise<OnboardingResult> {
     const normalizedEmail = email.toLowerCase().trim();
-
-    // Check duplicate email before starting the transaction
-    const existing = await this.pool.query(
-      `SELECT id FROM users WHERE email = $1`,
-      [normalizedEmail],
-    );
-    if (existing.rowCount && existing.rowCount > 0) {
-      throw new ConflictException('Email already registered');
-    }
-
     const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
 
     const client = await this.pool.connect();
@@ -82,6 +72,10 @@ export class OnboardingService {
       return { userId, tenantId };
     } catch (err) {
       await client.query('ROLLBACK').catch(() => {});
+      // Unique constraint on users.email — make it atomic with the insert
+      if ((err as { code?: string }).code === '23505') {
+        throw new ConflictException('Email already registered');
+      }
       throw err;
     } finally {
       client.release();

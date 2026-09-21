@@ -106,9 +106,11 @@ export class AuthService {
     ip?: string,
     userAgent?: string,
   ): Promise<{ sessionToken: string; csrfToken: string }> {
-    const rateLimitKey = `login:${ip ?? 'unknown'}`;
+    const normalizedEmail = email.toLowerCase().trim();
+    const ipKey = `login:${ip ?? 'unknown'}`;
+    const emailKey = `login:email:${normalizedEmail}`;
 
-    if (await this.isBlocked(rateLimitKey)) {
+    if (await this.isBlocked(ipKey) || await this.isBlocked(emailKey)) {
       throw new UnauthorizedException('Too many attempts. Try again later.');
     }
 
@@ -121,7 +123,7 @@ export class AuthService {
       `SELECT u.id, u.password_hash, u.status
        FROM users u
        WHERE u.email = $1`,
-      [email.toLowerCase().trim()],
+      [normalizedEmail],
     );
 
     const user = userRes.rows[0];
@@ -142,7 +144,10 @@ export class AuthService {
     }
 
     if (!user || !passwordValid || user.status !== 'ACTIVE') {
-      await this.recordFailedAttempt(rateLimitKey);
+      await Promise.all([
+        this.recordFailedAttempt(ipKey),
+        this.recordFailedAttempt(emailKey),
+      ]);
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -170,7 +175,10 @@ export class AuthService {
       [user.id, tenantId, sessionTokenHash, expiresAt, ip ?? null, userAgent ?? null, csrfTokenHash],
     );
 
-    await this.clearRateLimit(rateLimitKey);
+    await Promise.all([
+      this.clearRateLimit(ipKey),
+      this.clearRateLimit(emailKey),
+    ]);
 
     return { sessionToken, csrfToken };
   }
@@ -289,16 +297,19 @@ export class AuthService {
 
     const passwordHash = await argon2.hash(newPassword, { type: argon2.argon2id });
 
-    await this.pool.query(`BEGIN`);
+    const client = await this.pool.connect();
     try {
-      await this.pool.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [passwordHash, record.user_id]);
-      await this.pool.query(`UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1`, [record.id]);
+      await client.query('BEGIN');
+      await client.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [passwordHash, record.user_id]);
+      await client.query(`UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1`, [record.id]);
       // Invalidate all sessions for this user
-      await this.pool.query(`DELETE FROM sessions WHERE user_id = $1`, [record.user_id]);
-      await this.pool.query(`COMMIT`);
+      await client.query(`DELETE FROM sessions WHERE user_id = $1`, [record.user_id]);
+      await client.query('COMMIT');
     } catch (err) {
-      await this.pool.query(`ROLLBACK`);
+      await client.query('ROLLBACK').catch(() => {});
       throw err;
+    } finally {
+      client.release();
     }
   }
 
