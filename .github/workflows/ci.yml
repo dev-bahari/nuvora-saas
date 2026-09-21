@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality-gate:
+    name: Monorepo Quality Gate
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: nuvora_app
+          POSTGRES_PASSWORD: nuvora_test_password
+          POSTGRES_DB: nuvora_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      minio:
+        image: minio/minio:RELEASE.2024-11-07T00-52-28Z
+        env:
+          MINIO_ROOT_USER: minio_admin
+          MINIO_ROOT_PASSWORD: minio_test_password
+        ports:
+          - 9000:9000
+        options: >-
+          server /data
+
+    env:
+      NODE_ENV: test
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: nuvora_app
+      POSTGRES_PASSWORD: nuvora_test_password
+      POSTGRES_DB: nuvora_test
+      DATABASE_URL: postgresql://nuvora_app:nuvora_test_password@localhost:5432/nuvora_test
+      STORAGE_ENDPOINT: http://localhost:9000
+      STORAGE_ACCESS_KEY: minio_admin
+      STORAGE_SECRET_KEY: minio_test_password
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Phase 1 — Lint
+        run: pnpm run lint
+
+      - name: Phase 2 — Typecheck
+        run: pnpm run typecheck
+
+      - name: Phase 3 — Unit Tests
+        run: pnpm run test
+
+      - name: Phase 4 — Integration Tests
+        run: pnpm run test:integration
+
+      - name: Phase 5 — E2E Tests
+        run: pnpm run test:e2e
+
+      - name: Phase 6 — Build
+        run: pnpm run build
