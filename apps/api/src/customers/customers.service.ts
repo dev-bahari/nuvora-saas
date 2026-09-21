@@ -1,7 +1,42 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import pg from 'pg';
+import { z } from 'zod';
 import { withTenant } from '../tenancy/tenant-transaction.js';
 import type { RequestContext } from '../tenancy/tenant-context.js';
+
+// ---------- Zod schemas ----------
+
+const customerBaseSchema = z.object({
+  type: z.enum(['NATURAL_PERSON', 'LEGAL_ENTITY']).optional(),
+  identification_type: z.string().min(1),
+  identification: z.string().min(1),
+  dv: z.string().optional(),
+  legal_name: z.string().min(1),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  fiscal_responsibilities: z.array(z.string()).optional(),
+  email_primary: z.string().email(),
+  phone: z.string().optional(),
+  whatsapp: z.string().optional(),
+  address: z.string().optional(),
+  municipality: z.string().optional(),
+  department: z.string().optional(),
+  country: z.string().optional(),
+  contact_name: z.string().optional(),
+  internal_notes: z.string().optional(),
+});
+
+export const createCustomerSchema = customerBaseSchema;
+export const patchCustomerSchema = customerBaseSchema.partial().extend({
+  is_active: z.boolean().optional(),
+});
+
+// Allowlist of patchable columns
+const CUSTOMER_PATCH_ALLOWLIST = new Set([
+  'type','identification_type','identification','dv','legal_name','first_name','last_name',
+  'fiscal_responsibilities','email_primary','phone','whatsapp','address','municipality',
+  'department','country','contact_name','internal_notes','is_active',
+]);
 
 export interface CustomerRow {
   id: string;
@@ -152,6 +187,8 @@ export class CustomersService {
   }
 
   async create(ctx: RequestContext, dto: CreateCustomerDto): Promise<CustomerRow> {
+    const result = createCustomerSchema.safeParse(dto);
+    if (!result.success) throw new BadRequestException(result.error.message);
     return withTenant(this.pool, ctx, async (tx) => {
       try {
         const res = await tx.query<CustomerRow>(
@@ -195,13 +232,15 @@ export class CustomersService {
   }
 
   async patch(ctx: RequestContext, id: string, dto: PatchCustomerDto): Promise<CustomerRow> {
+    const result = patchCustomerSchema.safeParse(dto);
+    if (!result.success) throw new BadRequestException(result.error.message);
     return withTenant(this.pool, ctx, async (tx) => {
       const fields: string[] = [];
       const values: unknown[] = [];
       let i = 1;
 
       for (const [key, val] of Object.entries(dto)) {
-        if (val !== undefined) {
+        if (val !== undefined && CUSTOMER_PATCH_ALLOWLIST.has(key)) {
           fields.push(`${key} = $${i++}`);
           values.push(val);
         }

@@ -14,6 +14,38 @@ SELECT r.id, p.id FROM roles r, permissions p
 WHERE p.name = 'taxes.read' AND r.name IN ('OWNER','ADMIN','ACCOUNTANT','BILLING_AGENT','VIEWER')
 ON CONFLICT DO NOTHING;
 
+-- customers and products permissions
+INSERT INTO permissions (name, description, module) VALUES
+  ('customers.read',  'Consultar clientes',    'customers'),
+  ('customers.write', 'Crear y editar clientes', 'customers'),
+  ('products.read',   'Consultar productos',    'products'),
+  ('products.write',  'Crear y editar productos', 'products')
+ON CONFLICT (name) DO NOTHING;
+
+-- Grant customers.read to OWNER, ADMIN, ACCOUNTANT, BILLING_AGENT, VIEWER
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE p.name = 'customers.read' AND r.name IN ('OWNER','ADMIN','ACCOUNTANT','BILLING_AGENT','VIEWER')
+ON CONFLICT DO NOTHING;
+
+-- Grant customers.write to OWNER, ADMIN, ACCOUNTANT
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE p.name = 'customers.write' AND r.name IN ('OWNER','ADMIN','ACCOUNTANT')
+ON CONFLICT DO NOTHING;
+
+-- Grant products.read to OWNER, ADMIN, ACCOUNTANT, BILLING_AGENT, VIEWER
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE p.name = 'products.read' AND r.name IN ('OWNER','ADMIN','ACCOUNTANT','BILLING_AGENT','VIEWER')
+ON CONFLICT DO NOTHING;
+
+-- Grant products.write to OWNER, ADMIN, ACCOUNTANT
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE p.name = 'products.write' AND r.name IN ('OWNER','ADMIN','ACCOUNTANT')
+ON CONFLICT DO NOTHING;
+
 -- -----------------------------------------------
 -- 1. Taxes catalog (per-tenant)
 -- -----------------------------------------------

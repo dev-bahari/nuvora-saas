@@ -1,7 +1,35 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import pg from 'pg';
+import { z } from 'zod';
+import { positiveMoneySchema } from '@nuvora/contracts';
 import { withTenant } from '../tenancy/tenant-transaction.js';
 import type { RequestContext } from '../tenancy/tenant-context.js';
+
+// ---------- Zod schemas ----------
+
+const productBaseSchema = z.object({
+  internal_code: z.string().min(1),
+  standard_code: z.string().optional(),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  type: z.enum(['PRODUCT', 'SERVICE']).optional(),
+  unit_of_measure: z.string().optional(),
+  base_price: positiveMoneySchema,
+  default_tax_id: z.string().uuid().optional(),
+  tax_treatment: z.enum(['TAXED', 'EXEMPT', 'EXCLUDED', 'NON_TAXED']).optional(),
+  income_account_code: z.string().optional(),
+});
+
+export const createProductSchema = productBaseSchema;
+export const patchProductSchema = productBaseSchema.partial().extend({
+  is_active: z.boolean().optional(),
+});
+
+// Allowlist of patchable columns
+const PRODUCT_PATCH_ALLOWLIST = new Set([
+  'internal_code','standard_code','name','description','type','unit_of_measure',
+  'base_price','default_tax_id','tax_treatment','income_account_code','is_active',
+]);
 
 export interface TaxRow {
   id: string;
@@ -167,6 +195,8 @@ export class ProductsService {
   }
 
   async create(ctx: RequestContext, dto: CreateProductDto): Promise<ProductRow> {
+    const result = createProductSchema.safeParse(dto);
+    if (!result.success) throw new BadRequestException(result.error.message);
     return withTenant(this.pool, ctx, async (tx) => {
       try {
         const res = await tx.query<ProductRow>(
@@ -202,13 +232,15 @@ export class ProductsService {
   }
 
   async patch(ctx: RequestContext, id: string, dto: PatchProductDto): Promise<ProductRow> {
+    const result = patchProductSchema.safeParse(dto);
+    if (!result.success) throw new BadRequestException(result.error.message);
     return withTenant(this.pool, ctx, async (tx) => {
       const fields: string[] = [];
       const values: unknown[] = [];
       let i = 1;
 
       for (const [key, val] of Object.entries(dto)) {
-        if (val !== undefined) {
+        if (val !== undefined && PRODUCT_PATCH_ALLOWLIST.has(key)) {
           fields.push(`${key} = $${i++}`);
           values.push(val);
         }
