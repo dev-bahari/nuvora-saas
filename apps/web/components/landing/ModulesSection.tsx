@@ -3,30 +3,28 @@ import React from 'react';
 export function ModulesSection() {
   const modules = [
     {
-      category: 'Facturación & Ventas',
-      title: 'Emisión Fiscal Instantánea',
+      category: 'Ventas',
+      title: 'Facturación y Cotizaciones',
       description:
-        'Crea borradores colaborativos, calcula impuestos con precisión decimal y emite facturas con un clic. Validación DIAN directa con código QR y generación de PDF oficial.',
-      badge: 'Core Fiscal',
+        'Crea cotizaciones y conviértelas en facturas electrónicas con un solo clic. Genera notas crédito o débito cuando lo requieras sin complicaciones.',
+      badge: 'Esencial',
       icon: (
         <svg className="w-5 h-5 text-leaf-600 dark:text-leaf-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
           <polyline points="14 2 14 8 20 8" />
           <line x1="16" y1="13" x2="8" y2="13" />
           <line x1="16" y1="17" x2="8" y2="17" />
-          <polyline points="10 9 9 9 8 9" />
         </svg>
       ),
-      accentBorder: 'hover:border-leaf-500/50 dark:hover:border-leaf-500/50',
-      badgeColor: 'bg-leaf-50 text-leaf-700 border-leaf-200 dark:bg-leaf-950/60 dark:text-leaf-300 dark:border-leaf-800',
-      highlights: ['Factura Electrónica UBL 2.1', 'Notas Crédito y Débito', 'Representación Gráfica PDF', 'Envío Certificado por Email'],
+      accentBorder: 'hover:border-leaf-500/50',
+      highlights: ['Factura electrónica en 1 clic', 'Notas crédito y débito', 'Representación gráfica PDF con tu logo', 'Envío automático por correo'],
     },
     {
-      category: 'Directorio Comercial',
-      title: 'Clientes y Terceros con RUT',
+      category: 'Clientes',
+      title: 'Directorio Inteligente de Clientes',
       description:
-        'Administra personas naturales y jurídicas con validación automática del dígito de verificación DIAN. Asigna condiciones comerciales, plazos y exenciones impositivas.',
-      badge: 'CRM Ligero',
+        'Guarda los datos de personas naturales y empresas. El sistema calcula automáticamente el dígito de verificación del NIT para que nunca cometas errores.',
+      badge: 'Gestión',
       icon: (
         <svg className="w-5 h-5 text-sapphire-600 dark:text-sapphire-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -35,16 +33,15 @@ export function ModulesSection() {
           <path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
       ),
-      accentBorder: 'hover:border-sapphire-500/50 dark:hover:border-sapphire-500/50',
-      badgeColor: 'bg-sapphire-50 text-sapphire-700 border-sapphire-200 dark:bg-sapphire-950/60 dark:text-sapphire-300 dark:border-sapphire-800',
-      highlights: ['Validación DV Algorítmica', 'Régimen Simple y Ordinario', 'Historial Fiscal por Cliente', 'Exportación a Excel / CSV'],
+      accentBorder: 'hover:border-sapphire-500/50',
+      highlights: ['Verificación automática de NIT y RUT', 'Historial de compras por cliente', 'Plazos de crédito y cobranza', 'Importación masiva desde Excel'],
     },
     {
-      category: 'Inventario & Precios',
-      title: 'Catálogo de Productos y Servicios',
+      category: 'Catálogo',
+      title: 'Productos, Servicios y Precios',
       description:
-        'Gestiona referencias, códigos estándar UNSPSC exigidos por la DIAN, unidades de medida y múltiples listas de precios con esquemas tributarios configurables.',
-      badge: 'Catálogo DIAN',
+        'Administra tu lista de productos o servicios con sus tarifas de IVA y precios claros. Encuentra rápidamente lo que vas a facturar.',
+      badge: 'Organización',
       icon: (
         <svg className="w-5 h-5 text-leaf-600 dark:text-leaf-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
@@ -52,59 +49,57 @@ export function ModulesSection() {
           <line x1="12" y1="22.08" x2="12" y2="12" />
         </svg>
       ),
-      accentBorder: 'hover:border-leaf-500/50 dark:hover:border-leaf-500/50',
-      badgeColor: 'bg-leaf-50 text-leaf-700 border-leaf-200 dark:bg-leaf-950/60 dark:text-leaf-300 dark:border-leaf-800',
-      highlights: ['Códigos UNSPSC Colombia', 'Tarifas IVA 0%, 5%, 19%', 'Retenciones en la Fuente / ICA', 'Control de Stock'],
+      accentBorder: 'hover:border-leaf-500/50',
+      highlights: ['Búsqueda rápida al facturar', 'Tarifas de IVA configurables', 'Control de stock y referencias', 'Códigos oficiales DIAN guiados'],
     },
     {
       category: 'Finanzas',
-      title: 'Contabilidad Básica Automática',
+      title: 'Reportes y Cuentas Claras',
       description:
-        'Cada documento fiscal emitido o recibido genera automáticamente su asiento contable de partida doble sin intervención manual, listo para reportes exógena y balance.',
-      badge: 'Automatización',
+        'Visualiza en tiempo real cuánto vendes al mes, qué facturas están pendientes de pago y exporta reportes detallados para tu contador.',
+      badge: 'Claridad',
       icon: (
         <svg className="w-5 h-5 text-sapphire-600 dark:text-sapphire-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-          <line x1="8" y1="21" x2="16" y2="21" />
-          <line x1="12" y1="17" x2="12" y2="21" />
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
         </svg>
       ),
-      accentBorder: 'hover:border-sapphire-500/50 dark:hover:border-sapphire-500/50',
-      badgeColor: 'bg-sapphire-50 text-sapphire-700 border-sapphire-200 dark:bg-sapphire-950/60 dark:text-sapphire-300 dark:border-sapphire-800',
-      highlights: ['Partida Doble Inmediata', 'Plan Único de Cuentas (PUC)', 'Libro Diario y Mayor', 'Cierre Fiscal Mensual'],
+      accentBorder: 'hover:border-sapphire-500/50',
+      highlights: ['Tablero de ventas en tiempo real', 'Reporte para declaración tributaria', 'Exportación a Excel en un clic', 'Balance mensual automático'],
     },
     {
-      category: 'Criptografía & Datos',
-      title: 'Seguridad Multitenant con RLS',
+      category: 'Colaboración',
+      title: 'Equipo y Accesos Seguros',
       description:
-        'Aislamiento riguroso a nivel de fila (PostgreSQL Row Level Security). Ningún tenant puede acceder ni consultar información de otra organización bajo ninguna circunstancia.',
-      badge: 'Aislamiento Estricto',
+        'Invita a tu equipo de trabajo o a tu contador externo y define qué información puede ver o editar cada uno según su función.',
+      badge: 'Multiusuario',
       icon: (
         <svg className="w-5 h-5 text-leaf-600 dark:text-leaf-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <line x1="19" y1="8" x2="19" y2="14" />
+          <line x1="22" y1="11" x2="16" y2="11" />
         </svg>
       ),
-      accentBorder: 'hover:border-leaf-500/50 dark:hover:border-leaf-500/50',
-      badgeColor: 'bg-leaf-50 text-leaf-700 border-leaf-200 dark:bg-leaf-950/60 dark:text-leaf-300 dark:border-leaf-800',
-      highlights: ['PostgreSQL FORCE RLS', 'Auditoría Inmutable Append-Only', 'Protección contra Inyección', 'Sesiones Cifradas Argon2id'],
+      accentBorder: 'hover:border-leaf-500/50',
+      highlights: ['Roles de administrador, vendedor y contador', 'Historial de cambios por usuario', 'Acceso seguro 24/7 en la nube', 'Sin límites de dispositivos'],
     },
     {
-      category: 'Infraestructura',
-      title: 'Almacenamiento S3 Inmutable',
+      category: 'Respaldo',
+      title: 'Historial y Descargas Inmediatas',
       description:
-        'Los archivos XML firmados y los PDFs generados se custodian en almacenamiento de objetos compatible con S3 (MinIO), protegidos contra borrado y manipulación.',
-      badge: 'Custodia Legal',
+        'Tus facturas y comprobantes quedan organizados y archivados para siempre. Encuentra cualquier documento del pasado en 2 clics.',
+      badge: 'Siempre Seguro',
       icon: (
         <svg className="w-5 h-5 text-sapphire-600 dark:text-sapphire-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" y1="3" x2="12" y2="15" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
         </svg>
       ),
-      accentBorder: 'hover:border-sapphire-500/50 dark:hover:border-sapphire-500/50',
-      badgeColor: 'bg-sapphire-50 text-sapphire-700 border-sapphire-200 dark:bg-sapphire-950/60 dark:text-sapphire-300 dark:border-sapphire-800',
-      highlights: ['Compatibilidad S3 / MinIO', 'Custodia Legal a 5 Años', 'URLs Seguras con Expiración', 'Descarga Masiva de Comprobantes'],
+      accentBorder: 'hover:border-sapphire-500/50',
+      highlights: ['Custodia legal a 5 años garantizada', 'Descarga masiva de comprobantes', 'Acceso a XML oficial y PDF', 'Búsqueda por fecha, cliente o valor'],
     },
   ];
 
@@ -112,16 +107,16 @@ export function ModulesSection() {
     <section id="modulos" className="py-24 relative overflow-hidden bg-slate-50/60 dark:bg-slate-950/80 transition-colors duration-200 border-t border-slate-200/80 dark:border-slate-800/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sapphire-50 dark:bg-sapphire-950/60 border border-sapphire-200 dark:border-sapphire-800/80 text-xs font-semibold text-sapphire-700 dark:text-sapphire-300 shadow-sm">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sapphire-50 dark:bg-sapphire-950/60 border border-sapphire-200 dark:border-sapphire-800/80 text-xs font-bold text-sapphire-800 dark:text-sapphire-300 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-sapphire-500 animate-pulse" />
-            Arquitectura Modular Monolítica
+            Módulos Fáciles de Usar
           </div>
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Un ERP diseñado para crecer al ritmo de tu empresa
+            Herramientas prácticas para hacer crecer tu empresa
           </h2>
           <p className="text-slate-600 dark:text-slate-300 text-base sm:text-lg leading-relaxed">
-            Activa solo los módulos que necesitas hoy. La arquitectura de Nuvora garantiza sincronización
-            consistente y en tiempo real entre facturación, contabilidad y almacenamiento.
+            Todo lo que necesitas para tu día a día, sin complicaciones técnicas ni pantallas confusas.
+            Comienza con lo básico y activa más funciones cuando tu negocio lo necesite.
           </p>
         </div>
 
@@ -134,14 +129,14 @@ export function ModulesSection() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200/60 dark:border-slate-700/60">
+                    <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60">
                       {m.icon}
                     </div>
                     <span className="text-xs font-bold uppercase tracking-wider text-leaf-700 dark:text-leaf-400">
                       {m.category}
                     </span>
                   </div>
-                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border ${m.badgeColor}`}>
+                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                     {m.badge}
                   </span>
                 </div>
@@ -155,9 +150,8 @@ export function ModulesSection() {
               </div>
 
               <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800/80">
-                <div className="text-xs font-bold text-slate-900 dark:text-slate-200 mb-3 flex items-center justify-between">
-                  <span>Capacidades incluidas</span>
-                  <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">4 de 4 activas</span>
+                <div className="text-xs font-bold text-slate-900 dark:text-slate-200 mb-3">
+                  Incluye:
                 </div>
                 <ul className="space-y-2.5">
                   {m.highlights.map((h) => (

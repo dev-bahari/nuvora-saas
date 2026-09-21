@@ -15,9 +15,12 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Nuvora — Facturación Electrónica y ERP Modular para Colombia',
+  title: 'Empyra — Facturación Electrónica y Gestión Empresarial Inteligente',
   description:
-    'Emisión de facturas electrónicas avaladas por la DIAN, notas crédito/débito, inventario y contabilidad básica automática para empresas colombianas.',
+    'Factura en segundos, automatiza tus cobros y mantén tu empresa 100% al día con la DIAN sin enredos. La plataforma moderna para empresas que quieren crecer.',
+  icons: {
+    icon: '/icono-blanco.png',
+  },
 };
 
 export default function RootLayout({
@@ -27,10 +30,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${outfit.variable} ${plusJakarta.variable}`}>
-      <body className="antialiased min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
+      <body className="antialiased min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-leaf-500 selection:text-white transition-colors duration-200">
         {children}
       </body>
     </html>
   );
 }
-

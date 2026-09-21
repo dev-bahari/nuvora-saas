@@ -1,5 +1,6 @@
-import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import Image from 'next/image';
 import { z } from 'zod';
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
@@ -7,22 +8,18 @@ const COOKIE_NAME = 'nuvora_session';
 const CSRF_COOKIE = 'nuvora_csrf';
 
 const loginSchema = z.object({
-  email: z.string().email('Correo electrónico inválido'),
-  password: z.string().min(1, 'Contraseña requerida'),
+  email: z.string().email('Email inválido'),
+  password: z.string().min(8, 'Contraseña debe tener al menos 8 caracteres'),
 });
 
-interface ActionState {
-  error?: string;
-}
-
-async function loginAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+async function loginAction(formData: FormData): Promise<void> {
   'use server';
 
   const raw = { email: formData.get('email'), password: formData.get('password') };
   const parsed = loginSchema.safeParse(raw);
 
   if (!parsed.success) {
-    return { error: parsed.error.errors[0]?.message ?? 'Datos inválidos' };
+    redirect(`/login?error=${encodeURIComponent(parsed.error.issues[0]?.message ?? 'Datos inválidos')}`);
   }
 
   let sessionToken: string | undefined;
@@ -38,8 +35,10 @@ async function loginAction(_prev: ActionState, formData: FormData): Promise<Acti
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({})) as { message?: string };
-      if (res.status === 429) return { error: 'Demasiados intentos. Intente más tarde.' };
-      return { error: body.message ?? 'Credenciales inválidas' };
+      if (res.status === 429) {
+        redirect('/login?error=Demasiados+intentos.+Intente+m%C3%A1s+tarde.');
+      }
+      redirect(`/login?error=${encodeURIComponent(body.message ?? 'Credenciales inválidas')}`);
     }
 
     // Extract cookies from API response
@@ -50,12 +49,13 @@ async function loginAction(_prev: ActionState, formData: FormData): Promise<Acti
       if (match) sessionToken = decodeURIComponent(match[1] ?? '');
       if (csrfMatch) csrfToken = decodeURIComponent(csrfMatch[1] ?? '');
     }
-  } catch {
-    return { error: 'Error de conexión. Intente más tarde.' };
+  } catch (err: unknown) {
+    if (err && typeof err === 'object' && 'digest' in err) throw err;
+    redirect('/login?error=Error+de+conexi%C3%B3n.+Intente+m%C3%A1s+tarde.');
   }
 
   if (!sessionToken) {
-    return { error: 'Error al iniciar sesión. Intente de nuevo.' };
+    redirect('/login?error=Error+al+iniciar+sesi%C3%B3n.+Intente+de+nuevo.');
   }
 
   const cookieStore = await cookies();
@@ -80,18 +80,39 @@ async function loginAction(_prev: ActionState, formData: FormData): Promise<Acti
   redirect('/app/dashboard');
 }
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const params = await searchParams;
+
   return (
-    <main className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Nuvora</h1>
-          <p className="text-sm text-neutral-500 mt-1">Inicia sesión en tu cuenta</p>
+    <main className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+      <div className="w-full max-w-sm space-y-6 bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="text-center flex flex-col items-center">
+          <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 p-2 flex items-center justify-center shadow-md mb-3">
+            <Image
+              src="/icono-blanco.png"
+              alt="Logo Empyra"
+              width={36}
+              height={36}
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <h1 className="text-2xl font-bold font-display text-slate-900">Empyra</h1>
+          <p className="text-sm text-slate-500 mt-1">Inicia sesión en tu cuenta</p>
         </div>
+
+        {params?.error && (
+          <div role="alert" className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
+            {params.error}
+          </div>
+        )}
 
         <form action={loginAction} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
+            <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-1">
               Correo electrónico
             </label>
             <input
@@ -101,13 +122,13 @@ export default function LoginPage() {
               autoComplete="email"
               required
               aria-required="true"
-              className="w-full border rounded px-3 py-2 text-sm"
+              className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-leaf-500"
               placeholder="tu@empresa.com"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-1">
+            <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-1">
               Contraseña
             </label>
             <input
@@ -117,20 +138,21 @@ export default function LoginPage() {
               autoComplete="current-password"
               required
               aria-required="true"
-              className="w-full border rounded px-3 py-2 text-sm"
+              className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-leaf-500"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white rounded px-3 py-2 text-sm font-medium hover:bg-blue-700"
+            className="w-full bg-leaf-600 hover:bg-leaf-500 text-white font-bold rounded-xl py-3 text-sm shadow-md shadow-leaf-600/20 transition-all cursor-pointer"
           >
             Iniciar sesión
           </button>
 
-          <p className="text-center text-sm">
-            <a href="/onboarding" className="text-blue-600 hover:underline">
-              Crear cuenta nueva
+          <p className="text-center text-sm text-slate-600">
+            ¿No tienes cuenta?{' '}
+            <a href="/onboarding" className="text-leaf-700 font-bold hover:underline">
+              Crear cuenta gratis
             </a>
           </p>
         </form>

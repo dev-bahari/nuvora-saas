@@ -1,76 +1,82 @@
+'use client';
+
+import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ThemeToggle } from './ThemeToggle';
 
 export function Navbar() {
   return (
-    <header className="sticky top-0 z-50 transition-all duration-300 glass-nav-light dark:glass-nav-dark">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-3 group focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf-500 rounded-xl">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sapphire-600 via-leaf-500 to-emerald-400 p-[1.5px] shadow-md shadow-leaf-500/20 group-hover:scale-105 transition-transform duration-200">
-            <div className="w-full h-full bg-white dark:bg-slate-950 rounded-[10px] flex items-center justify-center transition-colors">
-              <svg
-                className="w-5 h-5 text-leaf-600 dark:text-leaf-400 group-hover:text-leaf-500 transition-colors"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-              </svg>
-            </div>
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md transition-colors duration-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        {/* Brand */}
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-xl bg-slate-950 dark:bg-slate-900 border border-slate-800 dark:border-slate-700 flex items-center justify-center p-1.5 shadow-md group-hover:scale-105 transition-all">
+            <Image
+              src="/icono-blanco.png"
+              alt="Logo Empyra"
+              width={32}
+              height={32}
+              className="w-full h-full object-contain"
+              priority
+            />
           </div>
           <div className="flex flex-col">
-            <span className="font-display font-extrabold text-xl tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-              Nuvora
-              <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-leaf-50 dark:bg-leaf-500/10 text-leaf-700 dark:text-leaf-300 border border-leaf-200 dark:border-leaf-500/20">
-                SaaS
-              </span>
+            <span className="font-display font-extrabold text-xl tracking-tight text-slate-900 dark:text-white leading-none">
+              Empyra
             </span>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-              Facturación & ERP Colombia
+            <span className="text-[10px] font-bold uppercase tracking-wider text-leaf-700 dark:text-leaf-400 mt-0.5">
+              Facturación Inteligente
             </span>
           </div>
         </Link>
 
-        {/* Desktop Navigation Links */}
+        {/* Navigation links */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600 dark:text-slate-300">
-          <a href="#dian" className="hover:text-leaf-600 dark:hover:text-white transition-colors">
-            Cumplimiento DIAN
+          <a
+            href="#beneficios"
+            className="hover:text-leaf-700 dark:hover:text-leaf-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf-500 rounded-md px-1"
+          >
+            Beneficios
           </a>
-          <a href="#modulos" className="hover:text-leaf-600 dark:hover:text-white transition-colors">
-            Módulos ERP
+          <a
+            href="#modulos"
+            className="hover:text-leaf-700 dark:hover:text-leaf-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf-500 rounded-md px-1"
+          >
+            Módulos
           </a>
-          <a href="#seguridad" className="hover:text-leaf-600 dark:hover:text-white transition-colors">
-            Seguridad RLS
+          <a
+            href="#precios"
+            className="hover:text-leaf-700 dark:hover:text-leaf-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf-500 rounded-md px-1"
+          >
+            Planes
           </a>
-          <a href="#precios" className="hover:text-leaf-600 dark:hover:text-white transition-colors">
-            Planes & Precios
-          </a>
-          <a href="#faq" className="hover:text-leaf-600 dark:hover:text-white transition-colors">
+          <a
+            href="#faq"
+            className="hover:text-leaf-700 dark:hover:text-leaf-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf-500 rounded-md px-1"
+          >
             Preguntas
           </a>
         </nav>
 
-        {/* Right actions: Theme toggle + Auth buttons */}
-        <div className="flex items-center gap-3">
+        {/* Actions: Theme Toggle + Auth CTAs */}
+        <div className="flex items-center gap-3 sm:gap-4">
           <ThemeToggle />
 
           <Link
             href="/login"
-            className="text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white px-3.5 py-2 rounded-xl transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors px-2 py-1.5"
           >
-            Iniciar Sesión
+            Ingresar
           </Link>
+
           <Link
-            href="/register"
-            className="inline-flex items-center gap-2 text-sm font-bold text-white bg-gradient-to-r from-leaf-600 via-emerald-600 to-sapphire-600 hover:from-leaf-500 hover:to-sapphire-500 px-5 py-2.5 rounded-xl shadow-md shadow-leaf-600/20 hover:shadow-lg hover:shadow-leaf-600/30 transition-all hover:-translate-y-0.5 active:translate-y-0"
+            href="/onboarding"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-leaf-600 hover:bg-leaf-500 shadow-md shadow-leaf-600/20 hover:shadow-lg hover:shadow-leaf-600/30 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf-600 focus-visible:ring-offset-2"
           >
-            <span>Comenzar Gratis</span>
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <path d="M5 12h14M12 5l7 7-7 7" />
+            <span>Crear Cuenta</span>
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="9 18 15 12 9 6" />
             </svg>
           </Link>
         </div>

@@ -17,8 +17,8 @@ describe('Auth Integration Tests', () => {
   let onboardingService: OnboardingService;
 
   const runId = `auth_${Date.now()}`;
-  let createdUserIds: string[] = [];
-  let createdTenantIds: string[] = [];
+  const createdUserIds: string[] = [];
+  const createdTenantIds: string[] = [];
 
   beforeAll(async () => {
     if (process.env['NODE_ENV'] === 'production') {
