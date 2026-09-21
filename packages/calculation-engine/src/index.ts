@@ -14,3 +14,5 @@ export const ENGINE_VERSION = '1.0.0';
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_HALF_UP });
 
 export { Decimal };
+
+export * from './calculation.js';

@@ -297,6 +297,9 @@ importers:
 
   packages/calculation-engine:
     dependencies:
+      '@nuvora/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       decimal.js:
         specifier: ^10.5.0
         version: 10.6.0
