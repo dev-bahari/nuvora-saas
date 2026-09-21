@@ -23,7 +23,8 @@ export type Permission =
   | 'accounting.write'
   | 'users.manage'
   | 'tenant.settings'
-  | 'audit.read';
+  | 'audit.read'
+  | 'taxes.read';
 
 export interface RequestContext {
   readonly userId: UserId;
