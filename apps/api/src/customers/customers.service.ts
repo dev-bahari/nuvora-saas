@@ -133,7 +133,7 @@ export class CustomersService {
 
   async list(
     ctx: RequestContext,
-    opts: { cursor?: string; limit?: number; search?: string },
+    opts: { cursor?: string | undefined; limit?: number | undefined; search?: string | undefined },
   ): Promise<PagedResult<CustomerRow>> {
     const limit = Math.min(opts.limit ?? 20, 100);
     return withTenant(this.pool, ctx, async (tx) => {

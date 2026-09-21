@@ -4,7 +4,6 @@
  */
 
 import { z } from 'zod';
-import { Decimal } from 'decimal.js';
 
 // ---------- primitive aliases ----------
 
@@ -28,12 +27,12 @@ const decimalString = z
   );
 
 export const positiveMoneySchema = decimalString.refine(
-  (v) => new Decimal(v).gte(0),
+  (v) => parseFloat(v) >= 0,
   { message: 'Money value must be non-negative' },
 );
 
 export const nonZeroPositiveMoneySchema = decimalString.refine(
-  (v) => new Decimal(v).gt(0),
+  (v) => parseFloat(v) > 0,
   { message: 'Money value must be positive' },
 );
 
@@ -41,16 +40,11 @@ export const nonZeroPositiveMoneySchema = decimalString.refine(
 
 export const LineInputSchema = z.object({
   description: z.string().min(1),
-  quantity: decimalString.refine((v) => new Decimal(v).gt(0), { message: 'Quantity must be positive' }),
+  quantity: decimalString.refine((v) => parseFloat(v) > 0, { message: 'Quantity must be positive' }),
   unitPrice: positiveMoneySchema,
-  discountPct: z
-    .number()
-    .min(0)
-    .max(100)
-    .optional()
-    .default(0),
+  discountPct: z.number().min(0).max(100).optional(),
   taxTreatment: z.enum(['TAXED', 'EXEMPT', 'EXCLUDED', 'NON_TAXED']),
-  taxRate: z.number().min(0).max(100).optional().default(0),
+  taxRate: z.number().min(0).max(100).optional(),
 });
 
 export type LineInput = z.infer<typeof LineInputSchema>;
@@ -104,7 +98,7 @@ export interface AIUResult {
 export const InvoiceInputSchema = z.object({
   lines: z.array(LineInputSchema).min(1),
   aiu: AIUInputSchema.optional(),
-  currency: z.string().length(3).optional().default('COP'),
+  currency: z.string().length(3).optional(),
 });
 
 export type InvoiceInput = z.infer<typeof InvoiceInputSchema>;

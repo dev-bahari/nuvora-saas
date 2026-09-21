@@ -12,7 +12,8 @@ import {
   Req,
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { CustomersService, CreateCustomerDto, PatchCustomerDto } from './customers.service.js';
+import { CustomersService } from './customers.service.js';
+import type { CreateCustomerDto, PatchCustomerDto } from './customers.service.js';
 import { SessionGuard } from '../auth/session.guard.js';
 import { PermissionGuard, RequirePermission } from '../tenancy/permission.guard.js';
 import type { RequestContext } from '../tenancy/tenant-context.js';

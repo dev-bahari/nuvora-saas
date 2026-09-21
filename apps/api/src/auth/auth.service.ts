@@ -6,7 +6,7 @@ import pg from 'pg';
 const { Pool } = pg;
 
 // ponytail: in-memory rate limit cache, replaced by DB-only if multi-instance matters
-const rateLimitCache = new Map<string, { attempts: number; blockedUntil?: number }>();
+const rateLimitCache = new Map<string, { attempts: number; blockedUntil?: number | undefined }>();
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 min

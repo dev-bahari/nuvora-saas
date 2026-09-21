@@ -18,6 +18,7 @@
     "@nestjs/common": "^11.0.11",
     "@nestjs/core": "^11.0.11",
     "@nestjs/platform-fastify": "^11.0.11",
+    "@nuvora/calculation-engine": "workspace:*",
     "@nuvora/contracts": "workspace:*",
     "argon2": "^0.45.1",
     "fastify": "^5.2.1",

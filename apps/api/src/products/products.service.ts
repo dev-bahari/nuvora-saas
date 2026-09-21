@@ -129,7 +129,7 @@ export class ProductsService {
 
   async list(
     ctx: RequestContext,
-    opts: { cursor?: string; limit?: number; search?: string; active?: boolean },
+    opts: { cursor?: string | undefined; limit?: number | undefined; search?: string | undefined; active?: boolean | undefined },
   ): Promise<PagedResult<ProductRow>> {
     const limit = Math.min(opts.limit ?? 20, 100);
     // Default active=true for selector usage
