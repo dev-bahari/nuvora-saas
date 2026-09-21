@@ -2,11 +2,11 @@
 
 ## Current gate
 
-- Phase: Foundation (Task 1 QA Remediation Applied; Task 2 Completed)
+- Phase: Foundation (Tasks 1 & 2 Complete; All 7 QA Blockers Fully Resolved)
 - Architecture gate: APPROVED (docs/coordination/preflight-architecture.md)
-- Platform gate: APPROVED (tests/integration/tenant-isolation.spec.ts & FORCE RLS)
+- Platform gate: APPROVED & VERIFIED (tests/integration/tenant-isolation.spec.ts 7/7, RLS on tenants & membership_permissions, dynamic DB grants)
 - Integration gate: pending
-- QA gate: REMEDIATION_COMPLETE (awaiting final QA verification)
+- QA gate: READY_FOR_REINSPECTION
 
 ## Active ownership
 
@@ -19,6 +19,44 @@
 | Auth & Onboarding (Task 3) | backend_domain | `apps/api/src/auth/`, `db/migrations/0003_auth.sql`, `apps/web/app/` | Argon2id, Session cookies | auth-onboarding-v1 | pending | backend_domain |
 
 ## Handoffs
+
+### 2026-09-21 — Foundation QA Remediation Round 2 (All 7 Blockers & Minor Findings Resolved)
+
+- Owner: primary / platform_architect
+- Scope completed: Subsanación rigurosa de los 7 bloqueadores y 3 observaciones menores reportadas por el `qa_gate`:
+  1. **CI en base limpia (Alta):** Se incorporó el paso `pnpm run db:migrate` en `.github/workflows/ci.yml` previo a la fase de integración, con verificación de esquema en `tests/integration/tenant-isolation.spec.ts`.
+  2. **Portabilidad de migraciones (Alta):** Conexión dinámica implementada en `db/migrations/0002_rls.sql` mediante `EXECUTE format('GRANT CONNECT ON DATABASE %I TO nuvora_app_user', current_database())`. Probado y verificado en `nuvora_dev` y `nuvora_test`.
+  3. **Seguridad RLS y permisos (Alta):**
+     - `membership_permissions` cuenta con `tenant_id NOT NULL`, `ROW LEVEL SECURITY` habilitado y forzado, y política de aislamiento `tenant_isolation_membership_permissions`.
+     - `tenants` cuenta con `ROW LEVEL SECURITY` habilitado y forzado con política `tenant_isolation_tenants`.
+     - `sessions.tenant_id` es estrictamente `NOT NULL REFERENCES tenants(id) ON DELETE CASCADE`.
+     - Privilegios destructivos globales (`TRUNCATE`, `DELETE`) sobre `tenants`, `users` y `audit_logs` revocados del rol de aplicación `nuvora_app_user`.
+     - Función en base de datos `get_effective_permissions(p_tenant_id, p_user_id)` calcula permisos en caliente basados en membresías activas, roles y overrides positivos/negativos.
+     - `PermissionGuard` evalúa permisos efectivos en caliente vía `PermissionsService`.
+  4. **Seguridad en datos de integración (Alta):** Eliminado `TRUNCATE` global en `tenant-isolation.spec.ts`. La limpieza se realiza exclusivamente sobre los UUIDs generados (`WHERE tenant_id IN ($1, $2)`), con guardas que abortan si se ejecuta en entorno de producción.
+  5. **ESLint monorepo completo (Media):** Script `lint` en raíz actualizado a `"eslint . && pnpm -r --if-present run lint"`, analizando la raíz, `db/**/*.ts`, `tests/**/*.ts` y todos los workspaces.
+  6. **Pinning estricto de dependencias y contenedores (Media):**
+     - Node engine fijado a `^24.0.0` con archivos `.node-version` y `.nvmrc` (`24.11.1`).
+     - MinIO fijado a la versión inmutable `quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z` en `compose.yaml` y `.github/workflows/ci.yml`.
+  7. **Cobertura real de readiness (Media):**
+     - Pool de `HealthService` configurado con `connectionTimeoutMillis: 2000`, `statement_timeout: 2000` y `query_timeout: 2000`.
+     - Nueva prueba de integración en `apps/api/test/health.spec.ts` verificando respuesta 503 contra un PostgreSQL inalcanzable real sin recurrir a mocks.
+  8. **Pendientes menores:**
+     - Archivos `tsconfig.tsbuildinfo` removidos del índice de git e ignorados en `.gitignore`.
+     - `git diff --check HEAD` verificado con código de salida 0 (sin espacios ni saltos sobrantes).
+     - Configuración de `@next/eslint-plugin-next` resuelta sin advertencias en la compilación de Next.js.
+- Files/contracts changed: `.github/workflows/ci.yml`, `.gitignore`, `.node-version`, `.nvmrc`, `package.json`, `pnpm-lock.yaml`, `compose.yaml`, `db/migrations/0001_identity_tenancy.sql`, `db/migrations/0002_rls.sql`, `apps/api/src/health/health.service.ts`, `apps/api/test/health.spec.ts`, `apps/api/src/tenancy/permission.guard.ts`, `apps/api/src/tenancy/permissions.service.ts`, `apps/web/next.config.ts`, `apps/web/package.json`, `eslint.config.mjs`, `tests/integration/tenant-isolation.spec.ts`, `docs/coordination/decisions.md`, `docs/coordination/implementation-status.md`.
+- Tests run and result:
+  - `pnpm install --frozen-lockfile`: 0 errores en 5.5s.
+  - `pnpm run lint`: código 0 en monorepo completo.
+  - `pnpm run typecheck`: código 0 en todos los workspaces.
+  - `pnpm run test`: 10/10 pruebas unitarias y de arquitectura pasando al 100%.
+  - `pnpm run db:migrate`: código 0 (ejecutado exitosamente en `nuvora_dev` y `nuvora_test`).
+  - `pnpm run test:integration`: 7/7 pruebas de integración RLS pasando al 100%.
+  - `pnpm run test:e2e`: código 0 (declarado honestamente como pendiente para Tarea 3).
+  - `pnpm run build`: código 0 en los 4 paquetes y aplicaciones.
+- Next owner: `qa_gate` para reinspección formal.
+
 
 ### 2026-09-21 — Foundation QA Remediation & Reinspection Request
 

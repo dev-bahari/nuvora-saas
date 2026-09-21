@@ -1,8 +1,8 @@
 # Preflight de arquitectura — SaaS de facturación Colombia
 
-Fecha: 2026-09-21  
-Rol: `modular_architect`  
-Alcance: revisión previa a ejecución; no implementa producto.  
+Fecha: 2026-09-21
+Rol: `modular_architect`
+Alcance: revisión previa a ejecución; no implementa producto.
 Autoridades, en orden: `SPECS_SaaS_Facturacion_Colombia.md`, `AGENTS.md`, plan aprobado, skills Nuvora aplicables.
 
 ## Resultado ejecutivo

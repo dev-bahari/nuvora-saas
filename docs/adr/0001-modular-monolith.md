@@ -1,9 +1,9 @@
 # ADR 0001: Monolito Modular con NestJS Fastify, Next.js App Router y PostgreSQL
 
-**Estado:** Aceptado  
-**Fecha:** 2026-09-21  
-**Decisores:** Primary Agent, Modular Architect, Platform Architect  
-**Contexto Normativo:** Anexo Técnico Facturación Electrónica DIAN v1.9 / SPECS Nuvora  
+**Estado:** Aceptado
+**Fecha:** 2026-09-21
+**Decisores:** Primary Agent, Modular Architect, Platform Architect
+**Contexto Normativo:** Anexo Técnico Facturación Electrónica DIAN v1.9 / SPECS Nuvora
 
 ---
 

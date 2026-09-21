@@ -27,7 +27,7 @@ jobs:
           --health-retries 5
 
       minio:
-        image: quay.io/minio/minio:latest
+        image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
         env:
           MINIO_ROOT_USER: minio_admin
           MINIO_ROOT_PASSWORD: minio_test_password
@@ -74,6 +74,9 @@ jobs:
 
       - name: Phase 3 — Unit Tests
         run: pnpm run test
+
+      - name: Apply Database Migrations
+        run: pnpm run db:migrate
 
       - name: Phase 4 — Integration Tests
         run: pnpm run test:integration

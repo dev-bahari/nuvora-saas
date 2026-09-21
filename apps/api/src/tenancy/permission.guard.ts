@@ -5,9 +5,11 @@ import {
   ForbiddenException,
   SetMetadata,
   CustomDecorator,
+  Optional,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Permission, RequestContext } from './tenant-context.js';
+import { PermissionsService } from './permissions.service.js';
 
 export const PERMISSION_KEY = 'required_permission';
 
@@ -19,9 +21,12 @@ export const RequirePermission = (permission: Permission): CustomDecorator<strin
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    @Optional() private readonly permissionsService?: PermissionsService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredPermission = this.reflector.getAllAndOverride<Permission | undefined>(
       PERMISSION_KEY,
       [context.getHandler(), context.getClass()],
@@ -34,11 +39,24 @@ export class PermissionGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<{ context?: RequestContext }>();
     const ctx = request.context;
 
-    if (!ctx || !ctx.permissions) {
+    if (!ctx || !ctx.tenantId || !ctx.userId) {
       throw new ForbiddenException('Tenant context not established on request');
     }
 
-    if (!ctx.permissions.includes(requiredPermission)) {
+    // Resolve live effective permissions from active membership if permissions service is available
+    if (this.permissionsService) {
+      const effective = await this.permissionsService.getEffectivePermissions(
+        ctx.tenantId,
+        ctx.userId,
+      );
+      if (!effective.includes(requiredPermission)) {
+        throw new ForbiddenException(`Missing required permission: ${requiredPermission}`);
+      }
+      return true;
+    }
+
+    // Fallback if no database service is injected (e.g., isolated controller unit tests)
+    if (!ctx.permissions || !ctx.permissions.includes(requiredPermission)) {
       throw new ForbiddenException(`Missing required permission: ${requiredPermission}`);
     }
 

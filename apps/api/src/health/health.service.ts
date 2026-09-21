@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, Optional } from '@nestjs/common';
 import pg from 'pg';
 
 const { Pool } = pg;
@@ -7,14 +7,20 @@ const { Pool } = pg;
 export class HealthService implements OnModuleDestroy {
   private pool: pg.Pool;
 
-  constructor() {
-    const connectionString =
-      process.env['DATABASE_URL'] ??
-      'postgresql://nuvora_app:nuvora_local_dev_password@localhost:54321/nuvora_dev';
-    this.pool = new Pool({
-      connectionString,
-      connectionTimeoutMillis: 2000,
-    });
+  constructor(@Optional() customPool?: pg.Pool) {
+    if (customPool) {
+      this.pool = customPool;
+    } else {
+      const connectionString =
+        process.env['DATABASE_URL'] ??
+        'postgresql://nuvora_app:nuvora_local_dev_password@localhost:54321/nuvora_dev';
+      this.pool = new Pool({
+        connectionString,
+        connectionTimeoutMillis: 2000,
+        statement_timeout: 2000,
+        query_timeout: 2000,
+      });
+    }
   }
 
   async checkDatabase(): Promise<boolean> {
