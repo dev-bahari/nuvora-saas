@@ -8,6 +8,7 @@ import {
   calculateCreditNote,
   calculateDebitNote,
 } from './calculation.js';
+import { DomainError } from '@nuvora/contracts';
 import { Decimal } from 'decimal.js';
 
 // ─── roundMoney ──────────────────────────────────────────────────────────────
@@ -207,17 +208,18 @@ describe('calculateAIU', () => {
     expect(result.total).toBe('115000.00');
   });
 
-  it('marks belowMinimum when base < limit', () => {
-    const result = calculateAIU({
-      base: '50000',
-      administracionPct: 4,
-      imprevistosPct: 3,
-      utilidadPct: 10,
-      ivaOnUtilidadPct: 19,
-      mode: 'SPECIAL',
-      minimumBaseLimit: '100000',
-    });
-    expect(result.belowMinimum).toBe(true);
+  it('throws DomainError when SPECIAL mode and base < limit', () => {
+    expect(() =>
+      calculateAIU({
+        base: '50000',
+        administracionPct: 4,
+        imprevistosPct: 3,
+        utilidadPct: 10,
+        ivaOnUtilidadPct: 19,
+        mode: 'SPECIAL',
+        minimumBaseLimit: '100000',
+      }),
+    ).toThrow(DomainError);
   });
 
   it('belowMinimum false when base >= limit', () => {

@@ -4,6 +4,9 @@
  */
 
 import { Decimal } from 'decimal.js';
+import {
+  DomainError,
+} from '@nuvora/contracts';
 import type {
   LineInput,
   LineResult,
@@ -17,8 +20,6 @@ import type {
   DebitNoteInput,
   DebitNoteResult,
 } from '@nuvora/contracts';
-
-Decimal.set({ precision: 20, rounding: Decimal.ROUND_HALF_UP });
 
 // ─── roundMoney ──────────────────────────────────────────────────────────────
 
@@ -114,6 +115,14 @@ export function calculateAIU(input: AIUInput): AIUResult {
     input.minimumBaseLimit != null
       ? base.lessThan(input.minimumBaseLimit)
       : false;
+
+  // SPECIAL mode with below-minimum base throws an error
+  if ((input.mode ?? 'SPECIAL') === 'SPECIAL' && belowMinimum) {
+    throw new DomainError(
+      'AIU_BELOW_MINIMUM',
+      `AIU base ${input.base} is below minimum limit ${input.minimumBaseLimit}`,
+    );
+  }
 
   return Object.freeze({
     base: roundMoney(base),

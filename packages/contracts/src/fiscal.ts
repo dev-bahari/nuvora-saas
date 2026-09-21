@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { Decimal } from 'decimal.js';
 
 // ---------- primitive aliases ----------
 
@@ -27,12 +28,12 @@ const decimalString = z
   );
 
 export const positiveMoneySchema = decimalString.refine(
-  (v) => parseFloat(v) >= 0,
+  (v) => new Decimal(v).gte(0),
   { message: 'Money value must be non-negative' },
 );
 
 export const nonZeroPositiveMoneySchema = decimalString.refine(
-  (v) => parseFloat(v) > 0,
+  (v) => new Decimal(v).gt(0),
   { message: 'Money value must be positive' },
 );
 
@@ -40,7 +41,7 @@ export const nonZeroPositiveMoneySchema = decimalString.refine(
 
 export const LineInputSchema = z.object({
   description: z.string().min(1),
-  quantity: decimalString.refine((v) => parseFloat(v) > 0, { message: 'Quantity must be positive' }),
+  quantity: decimalString.refine((v) => new Decimal(v).gt(0), { message: 'Quantity must be positive' }),
   unitPrice: positiveMoneySchema,
   discountPct: z
     .number()
