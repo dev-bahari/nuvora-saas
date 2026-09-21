@@ -17,10 +17,16 @@
     "build": "pnpm -r --if-present run build",
     "db:migrate": "tsx db/migrate.ts"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "argon2"
+    ]
+  },
   "devDependencies": {
     "@nestjs/common": "^12.0.3",
     "@nestjs/core": "^12.0.3",
     "@next/eslint-plugin-next": "^15.5.25",
+    "@playwright/test": "^1.63.0",
     "@types/pg": "^8.23.1",
     "eslint": "^10.11.0",
     "pg": "^8.23.0",

@@ -15,7 +15,8 @@
     "@nuvora/contracts": "workspace:*",
     "next": "^15.2.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "^15.5.25",
