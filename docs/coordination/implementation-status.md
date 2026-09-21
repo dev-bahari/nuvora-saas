@@ -20,6 +20,30 @@
 
 ## Handoffs
 
+### 2026-09-21 — Foundation QA Remediation & Reinspection Request
+
+- Owner: primary
+- Scope completed: Subsanación integral de los 6 bloqueadores y discrepancias emitidos por `qa_gate` para Foundation (Task 1 y Task 2):
+  1. `/health/ready` dinámico con prueba de PostgreSQL (`SELECT 1`) en `HealthService` (200 OK en salud / 503 Service Unavailable en desconexión).
+  2. `compose.yaml` actualizado a `quay.io/minio/minio:latest` con healthcheck `curl -f http://localhost:9000/minio/health/live`. Verificado `docker compose up -d --wait` (ambos healthy).
+  3. ESLint real (`eslint.config.mjs`) configurado en los 4 proyectos sin scripts simulados.
+  4. Suite automatizada de fronteras arquitectónicas (`tests/architecture/boundaries.spec.ts`) integrada en `pnpm test`.
+  5. Pinning estricto de Node 24 y pnpm 12.5.1 en `package.json` y `.github/workflows/ci.yml`.
+  6. Suite de integración ejecutando 6 pruebas reales de aislamiento RLS contra PostgreSQL; suite E2E declarada con transparencia como pendiente Task 3.
+  7. Preflight de arquitectura enlazado a `docs/coordination/preflight-architecture.md`.
+- Files/contracts changed: `apps/api/src/health/health.controller.ts`, `apps/api/src/health/health.service.ts`, `apps/api/src/health/health.module.ts`, `apps/api/test/health.spec.ts`, `compose.yaml`, `eslint.config.mjs`, `package.json`, `pnpm-lock.yaml`, `apps/api/package.json`, `apps/web/package.json`, `packages/contracts/package.json`, `packages/calculation-engine/package.json`, `tests/architecture/boundaries.spec.ts`, `tests/integration/tenant-isolation.spec.ts`, `.github/workflows/ci.yml`, `docs/coordination/implementation-status.md`.
+- Tests run and result:
+  - `docker compose up -d --wait`: PostgreSQL y MinIO en estado `Healthy`.
+  - `pnpm lint`: Real ESLint pasa en los 4 proyectos con 0 errores y 0 advertencias.
+  - `pnpm typecheck`: 0 errores en todos los paquetes.
+  - `pnpm test`: 9 pruebas unitarias y de fronteras arquitectónicas pasando al 100%.
+  - `pnpm test:integration`: 6 pruebas de aislamiento RLS pasando al 100% contra PostgreSQL.
+  - `pnpm build`: Todos los proyectos compilaron exitosamente.
+- Risks/decisions: Docker local de PostgreSQL mapeado en puerto 54321; rol restringido `nuvora_app_user` forzado en RLS.
+- Remaining work: Veredicto independiente del `qa_gate` para autorizar el avance hacia la Tarea 3.
+- Next owner: `qa_gate` para reinspección formal.
+- QA evidence: salida fresca de `docker compose up -d --wait ; pnpm lint ; pnpm typecheck ; pnpm test ; pnpm test:integration ; pnpm build` (código 0 en todos los comandos).
+
 ### 2026-09-21 — Tenancy & RLS (Task 2)
 
 - Owner: platform_architect / primary
