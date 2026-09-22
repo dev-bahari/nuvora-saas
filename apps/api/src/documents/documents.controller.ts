@@ -10,9 +10,11 @@ import {
   HttpStatus,
   UseGuards,
   Req,
+  Headers,
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 import { DocumentsService } from './documents.service.js';
+import { IssueDocumentService } from './issue-document.service.js';
 import { SessionGuard } from '../auth/session.guard.js';
 import { PermissionGuard, RequirePermission } from '../tenancy/permission.guard.js';
 import type { RequestContext } from '../tenancy/tenant-context.js';
@@ -23,7 +25,10 @@ type AuthRequest = FastifyRequest & { context: RequestContext };
 @Controller('invoices')
 @UseGuards(SessionGuard, PermissionGuard)
 export class DocumentsController {
-  constructor(private readonly documentsService: DocumentsService) {}
+  constructor(
+    private readonly documentsService: DocumentsService,
+    private readonly issueService: IssueDocumentService,
+  ) {}
 
   @Get()
   @RequirePermission('invoices.read')
@@ -48,14 +53,25 @@ export class DocumentsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @RequirePermission('invoices.create')
+  @RequirePermission('invoices.write')
   async create(@Req() req: AuthRequest, @Body() dto: CreateDraftDto) {
     return this.documentsService.createDraft(req.context, dto);
   }
 
   @Patch(':id')
-  @RequirePermission('invoices.create')
+  @RequirePermission('invoices.write')
   async patch(@Req() req: AuthRequest, @Param('id') id: string, @Body() dto: PatchDraftDto) {
     return this.documentsService.patchDraft(req.context, id, dto);
+  }
+
+  @Post(':id/issue')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('invoices.issue')
+  async issue(
+    @Req() req: AuthRequest,
+    @Param('id') id: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.issueService.issue(req.context, id, idempotencyKey);
   }
 }
