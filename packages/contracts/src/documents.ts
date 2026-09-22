@@ -133,6 +133,13 @@ export interface DraftDocument {
   readonly lines: readonly DraftLine[];
   readonly taxSummary: readonly DraftTaxSummary[];
   readonly aiu: DraftAIU | null;
+  // numbering (set on issue)
+  readonly numberPrefix?: string | null;
+  readonly documentNumber?: number | null;
+  // adjustment references (CREDIT_NOTE / DEBIT_NOTE)
+  readonly sourceDocumentId?: string | null;
+  readonly cude?: string | null;
+  readonly reasonCode?: string | null;
   // meta
   readonly createdBy: string | null;
   readonly createdAt: string;
