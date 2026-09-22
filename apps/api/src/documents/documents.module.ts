@@ -9,9 +9,11 @@ import { DebitNotesController } from './debit-notes/debit-notes.controller.js';
 import { NumberingModule } from '../numbering/numbering.module.js';
 import { AuditModule } from '../audit/audit.module.js';
 import { DianModule } from '../dian/dian.module.js';
+import { AccountingModule } from '../accounting/accounting.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 
 @Module({
-  imports: [NumberingModule, AuditModule, DianModule],
+  imports: [NumberingModule, AuditModule, DianModule, AccountingModule, NotificationsModule],
   providers: [
     DocumentsService,
     IssueDocumentService,

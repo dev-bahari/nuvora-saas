@@ -2,6 +2,8 @@ import {
   Injectable,
   UnprocessableEntityException,
   NotFoundException,
+  Logger,
+  Optional,
 } from '@nestjs/common';
 import pg from 'pg';
 import { withTenant } from '../tenancy/tenant-transaction.js';
@@ -11,6 +13,8 @@ import { AuditService } from '../audit/audit.service.js';
 import { MockDianProvider } from '../dian/mock-dian.provider.js';
 import { IdempotencyService } from '../common/idempotency/idempotency.service.js';
 import type { DraftDocument } from '@nuvora/contracts';
+import type { AccountingService } from '../accounting/accounting.service.js';
+import type { NotificationsService } from '../notifications/notifications.service.js';
 
 interface DocumentStatusRow {
   id: string;
@@ -20,6 +24,7 @@ interface DocumentStatusRow {
 
 @Injectable()
 export class IssueDocumentService {
+  private readonly logger = new Logger(IssueDocumentService.name);
   private pool: pg.Pool;
 
   constructor(
@@ -28,6 +33,8 @@ export class IssueDocumentService {
     private readonly dian: MockDianProvider,
     // ponytail: optional customPool for test injection; production uses env var
     customPool?: pg.Pool,
+    @Optional() private readonly accounting?: AccountingService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {
     this.pool =
       customPool ??
@@ -50,7 +57,9 @@ export class IssueDocumentService {
     documentId: string,
     idempotencyKey?: string,
   ): Promise<DraftDocument> {
-    return withTenant(this.pool, ctx, async (tx) => {
+    let finalStatus: 'ISSUED' | 'REJECTED' = 'ISSUED';
+
+    const issued = await withTenant(this.pool, ctx, async (tx) => {
       // Idempotency check
       if (idempotencyKey) {
         const replay = await IdempotencyService.begin(
@@ -108,7 +117,7 @@ export class IssueDocumentService {
 
       // Process outbox immediately (MockDianProvider is synchronous)
       const dianResult = await this.dian.submit(documentId);
-      const finalStatus = dianResult.outcome === 'ACCEPTED' ? 'ISSUED' : 'REJECTED';
+      finalStatus = dianResult.outcome === 'ACCEPTED' ? 'ISSUED' : 'REJECTED';
 
       await tx.query(
         `UPDATE fiscal_documents
@@ -197,6 +206,23 @@ export class IssueDocumentService {
 
       return result;
     });
+
+    // Post-transaction side effects (fire-and-forget; do not fail the issuance)
+    if (finalStatus === 'ISSUED') {
+      this.accounting?.recordIssuance(ctx, issued).catch((e) =>
+        this.logger.warn(`Accounting failed for ${documentId}: ${String(e)}`),
+      );
+      this.notifications?.dispatch(ctx, 'invoice.issued', documentId, {
+        documentNumber: issued.documentNumber,
+        grandTotal: issued.grandTotal,
+      }).catch((e) => this.logger.warn(`Notification failed: ${String(e)}`));
+    } else {
+      this.notifications?.dispatch(ctx, 'invoice.rejected', documentId, {
+        documentNumber: issued.documentNumber,
+      }).catch((e) => this.logger.warn(`Notification failed: ${String(e)}`));
+    }
+
+    return issued;
   }
 
   /**
