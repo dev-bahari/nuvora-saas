@@ -193,15 +193,13 @@ export function InvoicesClient({ initialData, total, nextCursor, activeStatus, c
         activeFilterCount={activeFilterCount}
         onClear={() => { setSearch(''); updateStatus(''); }}
       >
-        <button
-          ref={createBtnRef}
-          type="button"
+        <Link
+          href="/app/invoices/new"
           className="ui-button-primary shrink-0"
           data-testid="open-new-invoice"
-          onClick={() => setCreateOpen(true)}
         >
           Nueva factura
-        </button>
+        </Link>
       </DataToolbar>
 
       <p className="text-sm ui-muted">{total} documento{total !== 1 ? 's' : ''}</p>
@@ -212,9 +210,9 @@ export function InvoicesClient({ initialData, total, nextCursor, activeStatus, c
           title="Sin facturas"
           description={'Crea tu primera factura con el botón "Nueva factura" para comenzar a facturar.'}
           action={
-            <button type="button" className="ui-button-primary" onClick={() => setCreateOpen(true)}>
+            <Link href="/app/invoices/new" className="ui-button-primary">
               Nueva factura
-            </button>
+            </Link>
           }
         />
       ) : (
