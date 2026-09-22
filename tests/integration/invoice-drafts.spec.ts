@@ -15,7 +15,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
-import { withTenant } from '../../apps/api/src/tenancy/tenant-transaction.js';
+import { withTenant as _withTenant } from '../../apps/api/src/tenancy/tenant-transaction.js';
 import type { RequestContext } from '../../apps/api/src/tenancy/tenant-context.js';
 import { DocumentsService } from '../../apps/api/src/documents/documents.service.js';
 import { runMigrations } from '../../db/migrate.js';

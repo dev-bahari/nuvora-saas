@@ -260,9 +260,15 @@ importers:
 
   apps/web:
     dependencies:
+      '@nuvora/calculation-engine':
+        specifier: workspace:*
+        version: link:../../packages/calculation-engine
       '@nuvora/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@nuvora/invoice-view':
+        specifier: workspace:*
+        version: link:../../packages/invoice-view
       next:
         specifier: ^15.2.1
         version: 15.5.25(@playwright/test@1.63.0)(@types/node@22.20.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)

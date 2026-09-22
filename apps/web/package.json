@@ -12,7 +12,9 @@
     "test:e2e": "echo \"web: e2e tests pending for Task 3\""
   },
   "dependencies": {
+    "@nuvora/calculation-engine": "workspace:*",
     "@nuvora/contracts": "workspace:*",
+    "@nuvora/invoice-view": "workspace:*",
     "next": "^15.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

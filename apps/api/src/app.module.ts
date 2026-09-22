@@ -7,11 +7,14 @@ import { DocumentsModule } from './documents/documents.module.js';
 import { ArtifactsModule } from './artifacts/artifacts.module.js';
 import { AccountingModule } from './accounting/accounting.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
+import { MetricsModule } from './metrics/metrics.module.js';
+import { SettingsModule } from './settings/settings.module.js';
 
 @Module({
   imports: [
     HealthModule, AuthModule, CustomersModule, ProductsModule,
     DocumentsModule, ArtifactsModule, AccountingModule, NotificationsModule,
+    MetricsModule, SettingsModule,
   ],
   controllers: [],
   providers: [],
