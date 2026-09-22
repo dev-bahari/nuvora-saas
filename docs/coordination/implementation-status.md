@@ -10,6 +10,14 @@
 
 ## Active ownership
 
+### 2026-09-22 — Authenticated panel UI redesign
+
+| Scope | Owner | Intended paths | Dependencies | Contract/version | Status | Next owner |
+|---|---|---|---|---|---|---|
+| UI Task 1: shell and feedback primitives | frontend_design | `apps/web/components/app-shell/*`, `apps/web/components/ui/*`, `apps/web/app/app/layout.tsx`, `apps/web/app/globals.css`, UI tests | approved UI spec/plan; current palette | panel-ui-v1 | active | UI reviewer |
+
+No other UI implementer may edit these paths until Task 1 review closes. Subsequent UI ownership is recorded before dispatch.
+
 | Scope | Owner | Intended paths | Dependencies | Contract/version | Status | Next owner |
 |---|---|---|---|---|---|---|
 | Agent environment | primary | `AGENTS.md`, `.codex/`, `.agents/skills/` | Codex multi-agent + Superpowers + Impeccable | coordination-v1 | complete | qa_gate |
