@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { PageHeader } from '../../../components/ui/PageHeader';
+import { MetricCard } from '../../../components/dashboard/MetricCard';
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 const COOKIE_NAME = 'nuvora_session';
@@ -10,6 +12,7 @@ interface DashboardMetrics {
   revenueThisMonth: string;
   pendingDian: number;
   rejectedThisMonth: number;
+  ivaTotalThisMonth?: string;
   recentDocuments: Array<{
     id: string;
     documentType: string;
@@ -28,20 +31,29 @@ const STATUS_LABELS: Record<string, string> = {
   PROCESSING: 'Procesando',
   CANCELLED_BY_CREDIT_NOTE: 'Anulado',
   CREDIT_NOTE: 'Nota crédito',
+  DIAN_ACCEPTED: 'Aceptado DIAN',
+  DIAN_PENDING: 'Pendiente DIAN',
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  DRAFT: 'bg-neutral-100 text-neutral-600',
-  ISSUED: 'bg-green-100 text-green-700',
-  REJECTED: 'bg-red-100 text-red-700',
-  PROCESSING: 'bg-yellow-100 text-yellow-700',
-  CANCELLED_BY_CREDIT_NOTE: 'bg-neutral-200 text-neutral-500',
+  DRAFT: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+  ISSUED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  DIAN_ACCEPTED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  REJECTED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  PROCESSING: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  DIAN_PENDING: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  CANCELLED_BY_CREDIT_NOTE: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
 };
 
 function fmt(amount: string): string {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(
-    parseFloat(amount),
-  );
+  const n = parseFloat(amount);
+  if (isNaN(n)) return '$ 0';
+  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+}
+
+function fmtDate(raw: string): string {
+  if (!raw) return '—';
+  try { return new Date(raw).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return raw; }
 }
 
 export default async function DashboardPage() {
@@ -54,6 +66,7 @@ export default async function DashboardPage() {
     revenueThisMonth: '0',
     pendingDian: 0,
     rejectedThisMonth: 0,
+    ivaTotalThisMonth: '0',
     recentDocuments: [],
   };
 
@@ -68,93 +81,101 @@ export default async function DashboardPage() {
     // show defaults
   }
 
-  const kpis = [
-    {
-      label: 'Facturas emitidas (mes)',
-      value: metrics.invoicesThisMonth.toString(),
-      sub: 'documentos',
-      color: 'border-l-blue-500',
-    },
-    {
-      label: 'Ingresos del mes',
-      value: fmt(metrics.revenueThisMonth),
-      sub: 'COP',
-      color: 'border-l-green-500',
-    },
-    {
-      label: 'Pendiente DIAN',
-      value: metrics.pendingDian.toString(),
-      sub: metrics.pendingDian === 1 ? 'documento' : 'documentos',
-      color: metrics.pendingDian > 0 ? 'border-l-yellow-500' : 'border-l-neutral-200',
-    },
-    {
-      label: 'Rechazadas (mes)',
-      value: metrics.rejectedThisMonth.toString(),
-      sub: 'documentos',
-      color: metrics.rejectedThisMonth > 0 ? 'border-l-red-500' : 'border-l-neutral-200',
-    },
-  ];
+  const hasPending = metrics.pendingDian > 0;
+  const hasRejected = metrics.rejectedThisMonth > 0;
 
   return (
-    <main className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <Link
-          href="/app/invoices/new"
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-        >
-          Nueva factura
-        </Link>
-      </div>
+    <div className="page-content">
+      <PageHeader
+        title="Dashboard"
+        description="Resumen de actividad fiscal del mes."
+        action={
+          <Link href="/app/invoices/new" className="ui-button-primary" data-testid="new-invoice-btn">
+            Nueva factura
+          </Link>
+        }
+      />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {kpis.map((kpi) => (
-          <div key={kpi.label} className={`bg-white dark:bg-slate-900 border rounded p-5 border-l-4 ${kpi.color}`}>
-            <p className="text-xs text-neutral-500 uppercase tracking-wide">{kpi.label}</p>
-            <p className="mt-2 text-2xl font-bold">{kpi.value}</p>
-            <p className="text-xs text-neutral-400">{kpi.sub}</p>
-          </div>
-        ))}
+      {/* KPI row */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Facturas emitidas"
+          value={metrics.invoicesThisMonth.toString()}
+          sub="este mes"
+          accent="blue"
+        />
+        <MetricCard
+          label="Pendiente / Rechazadas"
+          value={`${metrics.pendingDian} / ${metrics.rejectedThisMonth}`}
+          sub={hasPending || hasRejected ? 'requieren atención' : 'todo al día'}
+          accent={hasPending || hasRejected ? 'amber' : 'neutral'}
+        />
+        <MetricCard
+          label="Total facturado"
+          value={fmt(metrics.revenueThisMonth)}
+          sub="COP · este mes"
+          accent="green"
+        />
+        <MetricCard
+          label="IVA generado"
+          value={fmt(metrics.ivaTotalThisMonth ?? '0')}
+          sub="COP · este mes"
+          accent="neutral"
+        />
       </div>
 
       {/* Recent documents */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Documentos recientes</h2>
+      <section>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold">Documentos recientes</h2>
           <Link href="/app/invoices" className="text-sm text-blue-600 hover:underline">
             Ver todos →
           </Link>
         </div>
 
         {metrics.recentDocuments.length === 0 ? (
-          <div className="border rounded p-8 text-center text-neutral-400">
-            <p>Aún no hay documentos.</p>
-            <Link href="/app/invoices/new" className="mt-2 inline-block text-blue-600 hover:underline text-sm">
-              Crear primera factura
-            </Link>
+          <div className="ui-empty-state py-10">
+            <p className="text-base font-semibold">Aún no hay documentos</p>
+            <p className="ui-muted mt-2 text-sm">Crea tu primera factura para ver la actividad aquí.</p>
+            <div className="mt-6">
+              <Link href="/app/invoices/new" className="ui-button-primary">
+                Nueva factura
+              </Link>
+            </div>
           </div>
         ) : (
-          <ul className="divide-y border rounded bg-white dark:bg-slate-900">
-            {metrics.recentDocuments.map((doc) => (
-              <li key={doc.id} className="flex items-center justify-between p-4 hover:bg-neutral-50 dark:hover:bg-slate-800">
-                <div>
-                  <Link href={`/app/invoices/${doc.id}`} className="font-medium hover:underline text-sm">
-                    {doc.customerName || '—'}
-                  </Link>
-                  <p className="text-xs text-neutral-400">{doc.issueDate} · {STATUS_LABELS[doc.documentType] ?? doc.documentType}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold text-sm">{doc.currency} {doc.grandTotal}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded ${STATUS_COLOR[doc.status] ?? 'bg-neutral-100'}`}>
-                    {STATUS_LABELS[doc.status] ?? doc.status}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--card-border)' }}>
+            <table className="min-w-full divide-y text-sm" style={{ borderColor: 'var(--card-border)' }}>
+              <thead>
+                <tr className="text-left">
+                  {['Cliente', 'Número', 'Fecha', 'Total', 'Estado'].map((h) => (
+                    <th key={h} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide ui-muted">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y" style={{ borderColor: 'var(--card-border)' }}>
+                {metrics.recentDocuments.map((doc) => (
+                  <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <td className="px-4 py-3 font-medium">
+                      <Link href={`/app/invoices/${doc.id}`} className="hover:underline">
+                        {doc.customerName || '—'}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 ui-muted font-mono text-xs">#{doc.id.slice(0, 8)}</td>
+                    <td className="px-4 py-3 ui-muted">{fmtDate(doc.issueDate)}</td>
+                    <td className="px-4 py-3 font-semibold tabular-nums">{doc.currency} {doc.grandTotal}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[doc.status] ?? 'bg-slate-100 text-slate-600'}`}>
+                        {STATUS_LABELS[doc.status] ?? doc.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </div>
-    </main>
+      </section>
+    </div>
   );
 }
