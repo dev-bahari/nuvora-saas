@@ -18,6 +18,8 @@ interface Product {
   is_active: boolean;
 }
 
+const TAX_LABELS: Record<string, string> = { TAXED: 'Gravado', EXEMPT: 'Exento', EXCLUDED: 'Excluido', NON_TAXED: 'No gravado' };
+
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(COOKIE_NAME)?.value;
@@ -25,69 +27,68 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   const { id } = await params;
 
-  const res = await fetch(`${API_URL}/products/${id}`, {
-    headers: { Cookie: `${COOKIE_NAME}=${sessionToken}` },
-    cache: 'no-store',
-  });
-  if (res.status === 401) redirect('/login');
-  if (res.status === 404) notFound();
-  if (!res.ok) notFound();
-
-  const product = await res.json() as Product;
+  let product: Product | null = null;
+  try {
+    const res = await fetch(`${API_URL}/products/${id}`, {
+      headers: { Cookie: `${COOKIE_NAME}=${sessionToken}` },
+      cache: 'no-store',
+    });
+    if (res.status === 401) redirect('/login');
+    if (res.status === 404) notFound();
+    if (res.ok) product = await res.json() as Product;
+  } catch {
+    notFound();
+  }
+  if (!product) notFound();
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
-          <Link href="/app/products" className="text-neutral-500 hover:text-neutral-700">← Productos</Link>
-          <h1 className="text-2xl font-bold">{product.name}</h1>
-          {!product.is_active && (
-            <span className="text-xs bg-neutral-200 px-2 py-1 rounded">Inactivo</span>
-          )}
-        </div>
-
-        <dl className="grid grid-cols-2 gap-4">
-          <div>
-            <dt className="text-sm font-medium text-neutral-500">Código interno</dt>
-            <dd>{product.internal_code}</dd>
-          </div>
-          {product.standard_code && (
-            <div>
-              <dt className="text-sm font-medium text-neutral-500">Código estándar</dt>
-              <dd>{product.standard_code}</dd>
-            </div>
-          )}
-          <div>
-            <dt className="text-sm font-medium text-neutral-500">Tipo</dt>
-            <dd>{product.type}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-neutral-500">Unidad</dt>
-            <dd>{product.unit_of_measure}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-neutral-500">Precio base</dt>
-            <dd>${product.base_price}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-neutral-500">Tratamiento fiscal</dt>
-            <dd>{product.tax_treatment}</dd>
-          </div>
-          {product.description && (
-            <div className="col-span-2">
-              <dt className="text-sm font-medium text-neutral-500">Descripción</dt>
-              <dd>{product.description}</dd>
-            </div>
-          )}
-        </dl>
-
-        <Link
-          href={`/app/products/${id}/edit`}
-          className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Editar
-        </Link>
+    <div className="page-content">
+      <div className="flex items-center gap-3 flex-wrap">
+        <Link href="/app/products" className="ui-muted hover:underline text-sm">← Productos</Link>
+        <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
+        {!product.is_active && (
+          <span className="inline-block rounded px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            Inactivo
+          </span>
+        )}
       </div>
-    </main>
+
+      <dl className="grid grid-cols-2 gap-4 rounded-xl border p-6 mt-6" style={{ borderColor: 'var(--card-border)' }}>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide ui-muted">Código interno</dt>
+          <dd className="mt-1 font-mono text-sm">{product.internal_code}</dd>
+        </div>
+        {product.standard_code && (
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wide ui-muted">Código estándar</dt>
+            <dd className="mt-1 font-mono text-sm">{product.standard_code}</dd>
+          </div>
+        )}
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide ui-muted">Tipo</dt>
+          <dd className="mt-1">{product.type === 'SERVICE' ? 'Servicio' : 'Producto'}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide ui-muted">Unidad</dt>
+          <dd className="mt-1">{product.unit_of_measure}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide ui-muted">Precio base</dt>
+          <dd className="mt-1 tabular-nums">${product.base_price}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wide ui-muted">Tratamiento fiscal</dt>
+          <dd className="mt-1">{TAX_LABELS[product.tax_treatment] ?? product.tax_treatment}</dd>
+        </div>
+        {product.description && (
+          <div className="col-span-2">
+            <dt className="text-xs font-semibold uppercase tracking-wide ui-muted">Descripción</dt>
+            <dd className="mt-1">{product.description}</dd>
+          </div>
+        )}
+      </dl>
+
+      <p className="text-sm ui-muted mt-4">Para editar, usa el botón "Editar" en la <Link href="/app/products" className="text-blue-600 hover:underline">lista de productos</Link>.</p>
+    </div>
   );
 }
