@@ -11,7 +11,7 @@
   "scripts": {
     "lint": "eslint . && pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",
-    "test": "pnpm -r --if-present run test && vitest run tests/architecture tests/unit",
+    "test": "pnpm -r --if-present run test && vitest run tests/architecture tests/unit tests/security",
     "test:integration": "vitest run tests/integration",
     "test:unit": "vitest run tests/unit",
     "test:e2e": "pnpm -r --if-present run test:e2e",
@@ -24,12 +24,15 @@
     ]
   },
   "devDependencies": {
+    "@fastify/helmet": "^13.1.1",
+    "@fastify/rate-limit": "^11.2.0",
     "@nestjs/common": "^12.0.3",
     "@nestjs/core": "^12.0.3",
     "@next/eslint-plugin-next": "^15.5.25",
     "@playwright/test": "^1.63.0",
     "@types/pg": "^8.23.1",
     "eslint": "^10.11.0",
+    "fastify": "^5.12.5",
     "pg": "^8.23.0",
     "tsx": "^4.23.15",
     "typescript": "^5.7.3",
