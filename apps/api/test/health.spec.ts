@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import pg from 'pg';
@@ -181,5 +182,21 @@ describe('Artifacts composition and document contract', () => {
 
     expect(moduleFixture.get(ArtifactsService)).toBeInstanceOf(ArtifactsService);
     await moduleFixture.close();
+  });
+
+  it('resolves ArtifactsService from production-compiled metadata', () => {
+    execFileSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `import 'reflect-metadata';
+         import { Test } from '@nestjs/testing';
+         import { ArtifactsModule } from './dist/artifacts/artifacts.module.js';
+         const moduleFixture = await Test.createTestingModule({ imports: [ArtifactsModule] }).compile();
+         await moduleFixture.close();`,
+      ],
+      { cwd: process.cwd(), stdio: 'pipe' },
+    );
   });
 });

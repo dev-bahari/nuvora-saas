@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, Optional, NotFoundException, ForbiddenException } from '@nestjs/common';
 import pg from 'pg';
 import { withTenant } from '../tenancy/tenant-transaction.js';
 import type { RequestContext } from '../tenancy/tenant-context.js';
@@ -33,7 +33,7 @@ export class ArtifactsService {
     @Inject(XmlGeneratorService) private readonly xmlGenerator: XmlGeneratorService,
     @Inject(PdfRendererService) private readonly pdfRenderer: PdfRendererService,
     @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider,
-    customPool?: pg.Pool,
+    @Optional() customPool?: pg.Pool,
   ) {
     this.pool =
       customPool ??
