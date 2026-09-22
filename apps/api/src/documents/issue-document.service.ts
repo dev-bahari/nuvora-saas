@@ -15,6 +15,7 @@ import { IdempotencyService } from '../common/idempotency/idempotency.service.js
 import type { DraftDocument } from '@nuvora/contracts';
 import type { AccountingService } from '../accounting/accounting.service.js';
 import type { NotificationsService } from '../notifications/notifications.service.js';
+import { CufeService } from '../artifacts/cufe.service.js';
 
 interface DocumentStatusRow {
   id: string;
@@ -26,6 +27,8 @@ interface DocumentStatusRow {
 export class IssueDocumentService {
   private readonly logger = new Logger(IssueDocumentService.name);
   private pool: pg.Pool;
+
+  private readonly cufe = new CufeService();
 
   constructor(
     private readonly numbering: NumberingService,
@@ -88,16 +91,73 @@ export class IssueDocumentService {
       // Reserve number
       const reserved = await this.numbering.reserveNextNumber(tx, ctx.tenantId, 'INVOICE');
 
+      // Load financial data + tenant settings to compute CUFE
+      const { rows: [finRow] } = await tx.query<{
+        subtotal: string; total_tax: string; grand_total: string; issue_date: string;
+        customer_snapshot: { identification: string; identificationType?: string };
+        tax_treatment_summary: Array<{ tax_treatment: string; tax_amount: string }>;
+      }>(
+        `SELECT fd.subtotal, fd.total_tax, fd.grand_total, fd.issue_date::text, fd.customer_snapshot,
+                COALESCE(
+                  json_agg(json_build_object('tax_treatment', fdt.tax_treatment, 'tax_amount', fdt.tax_amount))
+                  FILTER (WHERE fdt.id IS NOT NULL), '[]'
+                ) AS tax_treatment_summary
+         FROM fiscal_documents fd
+         LEFT JOIN fiscal_document_taxes fdt ON fdt.document_id = fd.id
+         WHERE fd.id = $1
+         GROUP BY fd.id`,
+        [documentId],
+      );
+
+      const { rows: [settingsRow] } = await tx.query<{
+        nit: string; dian_environment: string; dian_technical_key: string | null;
+      }>(
+        `SELECT nit, dian_environment, dian_technical_key FROM tenant_settings WHERE tenant_id = $1`,
+        [ctx.tenantId],
+      );
+
+      const numFac = `${reserved.prefix ?? ''}${reserved.number}`;
+      const horFac = CufeService.colombiaTime();
+      const nitOfe = (settingsRow?.nit ?? '').replace(/[^0-9]/g, '');
+      const numAdq = (finRow?.customer_snapshot?.identification ?? '').replace(/[^0-9a-zA-Z]/g, '');
+      const tipoAmb: '1' | '2' = settingsRow?.dian_environment === 'PRODUCCION' ? '1' : '2';
+      const ivaAmount = Array.isArray(finRow?.tax_treatment_summary)
+        ? (finRow!.tax_treatment_summary as Array<{ tax_treatment: string; tax_amount: string }>)
+            .filter((t) => t.tax_treatment === 'TAXED')
+            .reduce((a, t) => a + parseFloat(t.tax_amount), 0)
+            .toFixed(2)
+        : '0.00';
+
+      const computedCufe = finRow && nitOfe
+        ? this.cufe.compute({
+            numFac,
+            fecFac: typeof finRow.issue_date === 'string'
+              ? finRow.issue_date
+              : new Date().toISOString().slice(0, 10),
+            horFac,
+            valFac: parseFloat(finRow.subtotal).toFixed(2),
+            valImp01: ivaAmount,
+            valImp02: '0.00',
+            valImp03: '0.00',
+            valTot: parseFloat(finRow.grand_total).toFixed(2),
+            nitOfe,
+            numAdq,
+            clTec: settingsRow?.dian_technical_key ?? '',
+            tipoAmb,
+          })
+        : null;
+
       // Transition → PROCESSING and write outbox atomically
       await tx.query(
         `UPDATE fiscal_documents
          SET status = 'PROCESSING',
              number_prefix  = $1,
              document_number = $2,
+             cude = COALESCE($5, cude),
              version = version + 1,
              updated_at = NOW()
          WHERE id = $3 AND version = $4`,
-        [reserved.prefix, reserved.number, documentId, doc.version],
+        [reserved.prefix, reserved.number, documentId, doc.version, computedCufe],
       );
 
       await tx.query(
@@ -155,13 +215,9 @@ export class IssueDocumentService {
         customer_snapshot: unknown; currency: string; issue_date: string; due_date: string | null;
         notes: string | null; subtotal: string; total_tax: string; grand_total: string;
         created_by: string | null; created_at: Date; updated_at: Date; customer_id: string | null;
-        number_prefix: string | null; document_number: string | null;
+        number_prefix: string | null; document_number: string | null; cude: string | null;
       }>(
-        `SELECT fd.*,
-                fd.number_prefix,
-                fd.document_number
-         FROM fiscal_documents fd
-         WHERE fd.id = $1`,
+        `SELECT fd.* FROM fiscal_documents fd WHERE fd.id = $1`,
         [documentId],
       );
 
@@ -185,6 +241,9 @@ export class IssueDocumentService {
         subtotal: parseFloat(updated.subtotal).toFixed(2),
         totalTax: parseFloat(updated.total_tax).toFixed(2),
         grandTotal: parseFloat(updated.grand_total).toFixed(2),
+        numberPrefix: updated.number_prefix,
+        documentNumber: updated.document_number ? parseInt(updated.document_number, 10) : null,
+        cude: updated.cude,
         lines: [],
         taxSummary: [],
         aiu: null,

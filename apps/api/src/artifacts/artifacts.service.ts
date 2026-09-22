@@ -4,6 +4,7 @@ import pg from 'pg';
 import { withTenant } from '../tenancy/tenant-transaction.js';
 import type { RequestContext } from '../tenancy/tenant-context.js';
 import { XmlGeneratorService } from './xml-generator.service.js';
+import type { TenantInfo } from './xml-generator.service.js';
 import { PdfRendererService } from './pdf-renderer.service.js';
 import { STORAGE_PROVIDER, type StorageProvider } from './storage.provider.js';
 import type { DraftDocument } from '@nuvora/contracts';
@@ -65,8 +66,12 @@ export class ArtifactsService {
       const doc = await this.loadDocument(tx, documentId, ctx.tenantId);
       if (!doc) throw new NotFoundException('Document not found');
 
+      const tenantInfo = kind === 'xml'
+        ? await this.loadTenantInfo(tx, ctx.tenantId)
+        : undefined;
+
       const { content, contentType } = kind === 'xml'
-        ? { content: this.xmlGenerator.generate(doc), contentType: 'application/xml' }
+        ? { content: this.xmlGenerator.generate(doc, tenantInfo), contentType: 'application/xml' }
         : { content: await this.pdfRenderer.render(doc), contentType: 'application/pdf' };
 
       const sha256 = crypto.createHash('sha256').update(content).digest('hex');
@@ -131,6 +136,35 @@ export class ArtifactsService {
     } finally {
       client.release();
     }
+  }
+
+  private async loadTenantInfo(tx: pg.PoolClient, tenantId: string): Promise<TenantInfo | undefined> {
+    const { rows } = await tx.query<{
+      legal_name: string; nit: string; address: string | null; city: string | null;
+      phone: string | null; email: string | null; tax_regime: string;
+      dian_environment: string; dian_software_id: string | null;
+      dian_software_pin: string | null; dian_technical_key: string | null;
+    }>(
+      `SELECT legal_name, nit, address, city, phone, email, tax_regime,
+              dian_environment, dian_software_id, dian_software_pin, dian_technical_key
+       FROM tenant_settings WHERE tenant_id = $1`,
+      [tenantId],
+    );
+    const r = rows[0];
+    if (!r) return undefined;
+    return {
+      legalName: r.legal_name,
+      nit: r.nit.replace(/[^0-9]/g, ''),
+      address: r.address,
+      city: r.city,
+      phone: r.phone,
+      email: r.email,
+      taxRegime: r.tax_regime,
+      dianEnvironment: r.dian_environment as TenantInfo['dianEnvironment'],
+      dianSoftwareId: r.dian_software_id,
+      dianSoftwarePin: r.dian_software_pin,
+      dianTechnicalKey: r.dian_technical_key,
+    };
   }
 
   private async loadDocument(

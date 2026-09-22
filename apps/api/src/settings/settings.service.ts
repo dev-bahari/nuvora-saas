@@ -13,6 +13,7 @@ export interface TenantSettings {
   taxRegime: 'COMUN' | 'SIMPLIFICADO' | 'NO_APLICA';
   dianEnvironment: 'HABILITACION' | 'PRODUCCION';
   dianSoftwareId: string | null;
+  dianTechnicalKey: string | null;
 }
 
 export interface UpdateSettingsDto {
@@ -26,6 +27,7 @@ export interface UpdateSettingsDto {
   dianEnvironment?: TenantSettings['dianEnvironment'];
   dianSoftwareId?: string | null;
   dianSoftwarePin?: string | null;
+  dianTechnicalKey?: string | null;
 }
 
 @Injectable()
@@ -46,9 +48,10 @@ export class SettingsService {
       const { rows } = await tx.query<{
         legal_name: string; nit: string; address: string | null; city: string | null;
         phone: string | null; email: string | null; tax_regime: string;
-        dian_environment: string; dian_software_id: string | null;
+        dian_environment: string; dian_software_id: string | null; dian_technical_key: string | null;
       }>(
-        `SELECT legal_name, nit, address, city, phone, email, tax_regime, dian_environment, dian_software_id
+        `SELECT legal_name, nit, address, city, phone, email, tax_regime,
+                dian_environment, dian_software_id, dian_technical_key
          FROM tenant_settings WHERE tenant_id = $1`,
         [ctx.tenantId],
       );
@@ -56,7 +59,8 @@ export class SettingsService {
       if (!r) {
         return {
           legalName: '', nit: '', address: null, city: null, phone: null, email: null,
-          taxRegime: 'SIMPLIFICADO', dianEnvironment: 'HABILITACION', dianSoftwareId: null,
+          taxRegime: 'SIMPLIFICADO', dianEnvironment: 'HABILITACION',
+          dianSoftwareId: null, dianTechnicalKey: null,
         };
       }
       return {
@@ -69,6 +73,7 @@ export class SettingsService {
         taxRegime: r.tax_regime as TenantSettings['taxRegime'],
         dianEnvironment: r.dian_environment as TenantSettings['dianEnvironment'],
         dianSoftwareId: r.dian_software_id,
+        dianTechnicalKey: r.dian_technical_key,
       };
     });
   }
@@ -78,20 +83,21 @@ export class SettingsService {
       await tx.query(
         `INSERT INTO tenant_settings
            (tenant_id, legal_name, nit, address, city, phone, email,
-            tax_regime, dian_environment, dian_software_id, dian_software_pin, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+            tax_regime, dian_environment, dian_software_id, dian_software_pin, dian_technical_key, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
          ON CONFLICT (tenant_id) DO UPDATE SET
-           legal_name        = COALESCE(EXCLUDED.legal_name, tenant_settings.legal_name),
-           nit               = COALESCE(EXCLUDED.nit, tenant_settings.nit),
-           address           = EXCLUDED.address,
-           city              = EXCLUDED.city,
-           phone             = EXCLUDED.phone,
-           email             = EXCLUDED.email,
-           tax_regime        = COALESCE(EXCLUDED.tax_regime, tenant_settings.tax_regime),
-           dian_environment  = COALESCE(EXCLUDED.dian_environment, tenant_settings.dian_environment),
-           dian_software_id  = EXCLUDED.dian_software_id,
-           dian_software_pin = COALESCE(EXCLUDED.dian_software_pin, tenant_settings.dian_software_pin),
-           updated_at        = NOW()`,
+           legal_name         = COALESCE(EXCLUDED.legal_name, tenant_settings.legal_name),
+           nit                = COALESCE(EXCLUDED.nit, tenant_settings.nit),
+           address            = EXCLUDED.address,
+           city               = EXCLUDED.city,
+           phone              = EXCLUDED.phone,
+           email              = EXCLUDED.email,
+           tax_regime         = COALESCE(EXCLUDED.tax_regime, tenant_settings.tax_regime),
+           dian_environment   = COALESCE(EXCLUDED.dian_environment, tenant_settings.dian_environment),
+           dian_software_id   = EXCLUDED.dian_software_id,
+           dian_software_pin  = COALESCE(EXCLUDED.dian_software_pin, tenant_settings.dian_software_pin),
+           dian_technical_key = COALESCE(EXCLUDED.dian_technical_key, tenant_settings.dian_technical_key),
+           updated_at         = NOW()`,
         [
           ctx.tenantId,
           dto.legalName ?? '',
@@ -104,6 +110,7 @@ export class SettingsService {
           dto.dianEnvironment ?? 'HABILITACION',
           dto.dianSoftwareId ?? null,
           dto.dianSoftwarePin ?? null,
+          dto.dianTechnicalKey ?? null,
         ],
       );
       return this.get(ctx);

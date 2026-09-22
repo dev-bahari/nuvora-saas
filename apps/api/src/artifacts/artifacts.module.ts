@@ -3,11 +3,13 @@ import { ArtifactsService } from './artifacts.service.js';
 import { ArtifactsController } from './artifacts.controller.js';
 import { XmlGeneratorService } from './xml-generator.service.js';
 import { PdfRendererService } from './pdf-renderer.service.js';
+import { CufeService } from './cufe.service.js';
 import { MinioStorageAdapter } from './minio-storage.adapter.js';
 import { STORAGE_PROVIDER } from './storage.provider.js';
 
 @Module({
   providers: [
+    CufeService,
     XmlGeneratorService,
     PdfRendererService,
     { provide: STORAGE_PROVIDER, useClass: MinioStorageAdapter },
