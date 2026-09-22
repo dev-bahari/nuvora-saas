@@ -30,8 +30,8 @@ export class ArtifactsService {
   private pool: pg.Pool;
 
   constructor(
-    private readonly xmlGenerator: XmlGeneratorService,
-    private readonly pdfRenderer: PdfRendererService,
+    @Inject(XmlGeneratorService) private readonly xmlGenerator: XmlGeneratorService,
+    @Inject(PdfRendererService) private readonly pdfRenderer: PdfRendererService,
     @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider,
     customPool?: pg.Pool,
   ) {
@@ -213,9 +213,9 @@ export class ArtifactsService {
       subtotal: parseFloat(row.subtotal).toFixed(2),
       totalTax: parseFloat(row.total_tax).toFixed(2),
       grandTotal: parseFloat(row.grand_total).toFixed(2),
-      numberPrefix: row.number_prefix,
-      documentNumber: row.document_number ? parseInt(row.document_number, 10) : null,
-      cude: row.cude,
+      ...(row.number_prefix ? { numberPrefix: row.number_prefix } : {}),
+      ...(row.document_number ? { documentNumber: row.document_number } : {}),
+      ...(row.cude ? { cude: row.cude } : {}),
       lines: lines.map((l: Record<string, unknown>, i: number) => ({
         id: l['id'] as string,
         position: (l['position'] as number) ?? i,

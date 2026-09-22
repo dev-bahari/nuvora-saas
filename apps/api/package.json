@@ -10,6 +10,7 @@
     "start:prod": "node dist/main",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
+    "pretest": "pnpm --filter @nuvora/contracts --filter @nuvora/calculation-engine --filter @nuvora/invoice-view -r --if-present run build",
     "test": "vitest run",
     "test:integration": "echo \"api: integration tests pending for Task 2\"",
     "test:e2e": "echo \"api: e2e tests pending for Task 3\""

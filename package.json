@@ -9,9 +9,10 @@
   },
   "packageManager": "pnpm@12.5.1",
   "scripts": {
+    "prepare:workspace": "pnpm --filter @nuvora/contracts --filter @nuvora/calculation-engine --filter @nuvora/invoice-view -r --if-present run build",
     "lint": "eslint . && pnpm -r --if-present run lint",
-    "typecheck": "pnpm -r --if-present run typecheck",
-    "test": "pnpm --filter @nuvora/contracts build && pnpm --filter @nuvora/calculation-engine build && pnpm -r --if-present run test && vitest run tests/architecture tests/unit tests/security",
+    "typecheck": "pnpm run prepare:workspace && pnpm -r --if-present run typecheck",
+    "test": "pnpm run prepare:workspace && pnpm -r --if-present run test && vitest run tests/architecture tests/unit tests/security",
     "test:integration": "vitest run tests/integration",
     "test:unit": "vitest run tests/unit",
     "test:e2e": "pnpm -r --if-present run test:e2e",

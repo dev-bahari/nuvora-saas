@@ -5,8 +5,59 @@ import pg from 'pg';
 import { AppModule } from '../src/app.module.js';
 import { HealthService } from '../src/health/health.service.js';
 import { HealthController } from '../src/health/health.controller.js';
+import { ArtifactsModule } from '../src/artifacts/artifacts.module.js';
+import { ArtifactsService } from '../src/artifacts/artifacts.service.js';
+import type { DraftDocument } from '@nuvora/contracts';
 
 const { Pool } = pg;
+
+const draftWithoutFiscalIdentifiers = {
+  id: '00000000-0000-0000-0000-000000000001',
+  tenantId: '00000000-0000-0000-0000-000000000002',
+  documentType: 'INVOICE',
+  status: 'DRAFT',
+  version: 1,
+  customerId: null,
+  customerSnapshot: {
+    id: '00000000-0000-0000-0000-000000000003',
+    legalName: 'Cliente de prueba',
+    identificationType: 'NIT',
+    identification: '900123456',
+    dv: null,
+    emailPrimary: 'cliente@example.test',
+    address: null,
+    municipality: null,
+    department: null,
+    country: 'CO',
+  },
+  currency: 'COP',
+  issueDate: '2026-09-22',
+  dueDate: null,
+  notes: null,
+  subtotal: '100.00',
+  totalTax: '19.00',
+  grandTotal: '119.00',
+  lines: [],
+  taxSummary: [],
+  aiu: null,
+  createdBy: null,
+  createdAt: '2026-09-22T00:00:00.000Z',
+  updatedAt: '2026-09-22T00:00:00.000Z',
+} satisfies DraftDocument;
+
+const issuedDocumentWithFiscalIdentifiers = {
+  ...draftWithoutFiscalIdentifiers,
+  status: 'ISSUED',
+  numberPrefix: 'SETP',
+  documentNumber: '990000001',
+  cufe: 'a'.repeat(96),
+  cude: 'b'.repeat(96),
+} satisfies DraftDocument;
+
+const issuedFiscalIdentifiers: Required<Pick<
+  DraftDocument,
+  'numberPrefix' | 'documentNumber' | 'cufe' | 'cude'
+>> = issuedDocumentWithFiscalIdentifiers;
 
 
 describe('Health Endpoints (HTTP Contract)', () => {
@@ -109,5 +160,26 @@ describe('Health Endpoints (HTTP Contract)', () => {
       await brokenApp.close();
       await unreachablePool.end().catch(() => {});
     }
+  });
+});
+
+describe('Artifacts composition and document contract', () => {
+  it('accepts drafts without fiscal identifiers and issued documents with persisted identifiers', () => {
+    expect(draftWithoutFiscalIdentifiers).not.toHaveProperty('numberPrefix');
+    expect(issuedFiscalIdentifiers).toMatchObject({
+      numberPrefix: 'SETP',
+      documentNumber: '990000001',
+      cufe: 'a'.repeat(96),
+      cude: 'b'.repeat(96),
+    });
+  });
+
+  it('resolves ArtifactsService from its Nest module', async () => {
+    const moduleFixture = await Test.createTestingModule({
+      imports: [ArtifactsModule],
+    }).compile();
+
+    expect(moduleFixture.get(ArtifactsService)).toBeInstanceOf(ArtifactsService);
+    await moduleFixture.close();
   });
 });
