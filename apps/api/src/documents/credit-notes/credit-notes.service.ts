@@ -1,7 +1,9 @@
 import crypto from 'node:crypto';
 import {
   Injectable,
+  Logger,
   NotFoundException,
+  Optional,
   UnprocessableEntityException,
   BadRequestException,
 } from '@nestjs/common';
@@ -11,6 +13,7 @@ import type { RequestContext } from '../../tenancy/tenant-context.js';
 import { NumberingService } from '../../numbering/numbering.service.js';
 import { AuditService } from '../../audit/audit.service.js';
 import { MockDianProvider } from '../../dian/mock-dian.provider.js';
+import type { AccountingService } from '../../accounting/accounting.service.js';
 import type { DraftDocument } from '@nuvora/contracts';
 
 export interface CreateCreditNoteDto {
@@ -33,6 +36,7 @@ function mockCude(documentId: string): string {
 
 @Injectable()
 export class CreditNotesService {
+  private readonly logger = new Logger(CreditNotesService.name);
   private pool: pg.Pool;
 
   constructor(
@@ -40,6 +44,7 @@ export class CreditNotesService {
     private readonly audit: AuditService,
     private readonly dian: MockDianProvider,
     customPool?: pg.Pool,
+    @Optional() private readonly accounting?: AccountingService,
   ) {
     this.pool =
       customPool ??
@@ -59,18 +64,20 @@ export class CreditNotesService {
     sourceDocumentId: string,
     dto: CreateCreditNoteDto,
   ): Promise<DraftDocument> {
-    return withTenant(this.pool, ctx, async (tx) => {
+    let sourceDoc: { id: string; grand_total: string; subtotal: string; total_tax: string } | undefined;
+    const nc = await withTenant(this.pool, ctx, async (tx) => {
       // Validate source document
       const { rows: sourceRows } = await tx.query<{
-        id: string; status: string; grand_total: string;
+        id: string; status: string; grand_total: string; subtotal: string; total_tax: string;
         customer_snapshot: DraftDocument['customerSnapshot'];
         currency: string; issue_date: string;
       }>(
-        `SELECT id, status, grand_total, customer_snapshot, currency, issue_date
+        `SELECT id, status, grand_total, subtotal, total_tax, customer_snapshot, currency, issue_date
          FROM fiscal_documents WHERE id = $1`,
         [sourceDocumentId],
       );
       const source = sourceRows[0];
+      sourceDoc = source;
       if (!source) throw new NotFoundException('Source invoice not found');
       if (source.status !== 'ISSUED') {
         throw new UnprocessableEntityException(
@@ -211,5 +218,20 @@ export class CreditNotesService {
         updatedAt: (r.updated_at as Date).toISOString(),
       };
     });
+
+    if (sourceDoc) {
+      const sourceDraft = {
+        ...nc,
+        id: sourceDocumentId,
+        grandTotal: parseFloat(sourceDoc.grand_total).toFixed(2),
+        subtotal: parseFloat(sourceDoc.subtotal).toFixed(2),
+        totalTax: parseFloat(sourceDoc.total_tax).toFixed(2),
+      } as import('@nuvora/contracts').DraftDocument;
+      this.accounting
+        ?.recordCreditNote(ctx, nc, sourceDraft)
+        .catch((e: unknown) => this.logger.warn('NC accounting failed', e));
+    }
+
+    return nc;
   }
 }
