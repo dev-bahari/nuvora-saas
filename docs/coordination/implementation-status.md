@@ -14,9 +14,11 @@
 
 | Scope | Owner | Intended paths | Dependencies | Contract/version | Status | Next owner |
 |---|---|---|---|---|---|---|
-| UI Task 1: shell and feedback primitives | frontend_design | `apps/web/components/app-shell/*`, `apps/web/components/ui/*`, `apps/web/app/app/layout.tsx`, `apps/web/app/globals.css`, UI tests | approved UI spec/plan; current palette | panel-ui-v1 | active | UI reviewer |
+| UI Task 1: shell and feedback primitives | frontend_design | `apps/web/components/app-shell/*`, `apps/web/components/ui/*`, `apps/web/app/app/layout.tsx`, `apps/web/app/api/logout/route.ts`, `apps/web/app/globals.css`, `apps/web/package.json`, `tests/ui/*`, root Playwright config if required | approved UI spec/plan; current palette | panel-ui-v1 | active | UI reviewer |
 
 No other UI implementer may edit these paths until Task 1 review closes. Subsequent UI ownership is recorded before dispatch.
+
+Ruling: the existing `/api/logout` action lacks a route. UI Task 1 adds a Next.js proxy that calls the existing API `POST /auth/logout`, clears `nuvora_session`, and redirects to `/login`; this repairs UI behavior without changing the API contract.
 
 | Scope | Owner | Intended paths | Dependencies | Contract/version | Status | Next owner |
 |---|---|---|---|---|---|---|
