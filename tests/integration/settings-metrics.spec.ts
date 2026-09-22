@@ -144,4 +144,22 @@ describe('Settings & Metrics Integration Tests (Task 13)', () => {
     const s = await settings.get(ctxB);
     expect(s.legalName).toBe('');
   });
+
+  it('RLS: tenant B write is silently blocked by PostgreSQL policy', async () => {
+    // withTenant sets app.tenant_id = tenantB; the UPDATE targets tenantA's row.
+    // RLS USING clause makes the row invisible to tenantB → rowCount = 0, no error thrown.
+    // This confirms the policy actively filters writes, not just reads.
+    const { withTenant } = await import('../../apps/api/src/tenancy/tenant-transaction.js');
+    const result = await withTenant(pool, ctxB, (tx) =>
+      tx.query(
+        `UPDATE tenant_settings SET legal_name = 'CROSS_TENANT_HACK' WHERE tenant_id = $1`,
+        [tenantAId],
+      ),
+    );
+    expect(result.rowCount).toBe(0);
+
+    // Verify tenant A's actual value was not changed
+    const sA = await settings.get(ctxA);
+    expect(sA.legalName).not.toBe('CROSS_TENANT_HACK');
+  });
 });

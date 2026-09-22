@@ -121,12 +121,13 @@ export class IssueDocumentService {
       const nitOfe = (settingsRow?.nit ?? '').replace(/[^0-9]/g, '');
       const numAdq = (finRow?.customer_snapshot?.identification ?? '').replace(/[^0-9a-zA-Z]/g, '');
       const tipoAmb: '1' | '2' = settingsRow?.dian_environment === 'PRODUCCION' ? '1' : '2';
-      const ivaAmount = Array.isArray(finRow?.tax_treatment_summary)
-        ? (finRow!.tax_treatment_summary as Array<{ tax_treatment: string; tax_amount: string }>)
-            .filter((t) => t.tax_treatment === 'TAXED')
-            .reduce((a, t) => a + parseFloat(t.tax_amount), 0)
-            .toFixed(2)
-        : '0.00';
+      const sumTreatment = (treatment: string) =>
+        Array.isArray(finRow?.tax_treatment_summary)
+          ? (finRow!.tax_treatment_summary as Array<{ tax_treatment: string; tax_amount: string }>)
+              .filter((t) => t.tax_treatment === treatment)
+              .reduce((a, t) => a + parseFloat(t.tax_amount), 0)
+              .toFixed(2)
+          : '0.00';
 
       const computedCufe = finRow && nitOfe
         ? this.cufe.compute({
@@ -136,9 +137,9 @@ export class IssueDocumentService {
               : new Date().toISOString().slice(0, 10),
             horFac,
             valFac: parseFloat(finRow.subtotal).toFixed(2),
-            valImp01: ivaAmount,
-            valImp02: '0.00',
-            valImp03: '0.00',
+            valImp01: sumTreatment('TAXED'),   // IVA
+            valImp02: sumTreatment('INC'),     // Impuesto al Consumo
+            valImp03: sumTreatment('ICA'),     // ICA (ext. future)
             valTot: parseFloat(finRow.grand_total).toFixed(2),
             nitOfe,
             numAdq,
