@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd ../.. && pnpm install --frozen-lockfile && pnpm --filter web build"
+buildCommand = "cd ../.. && pnpm install --frozen-lockfile && pnpm --filter @nuvora/contracts build && pnpm --filter @nuvora/calculation-engine build && pnpm --filter @nuvora/invoice-view build && pnpm --filter web build"
 
 [deploy]
 startCommand = "pnpm --filter web start"
