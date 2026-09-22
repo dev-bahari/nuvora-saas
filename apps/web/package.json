@@ -6,9 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint app",
+    "lint": "eslint app components",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"web: unit tests pending for components in Task 3\"",
+    "test": "playwright test --config ../../tests/ui/playwright.config.ts && vitest run components/ui/logout.test.ts",
     "test:e2e": "echo \"web: e2e tests pending for Task 3\""
   },
   "dependencies": {
