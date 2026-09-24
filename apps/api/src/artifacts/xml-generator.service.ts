@@ -149,7 +149,7 @@ export class XmlGeneratorService {
     listAgencyName="United Nations Economic Commission for Europe"
     listID="UN/ECE 1001 Invoice Type"
     listSchemeURI="urn:oasis:names:specification:ubl:codelist:gc:InvoiceTypeCode-2.1">01</cbc:InvoiceTypeCode>
-  <cbc:Note>${X(doc.notes ?? 'Factura de venta')}</cbc:Note>
+  <cbc:Note languageLocaleID="es">${X(doc.notes ?? 'Factura de venta')}</cbc:Note>
   <cbc:DocumentCurrencyCode>COP</cbc:DocumentCurrencyCode>
   <cbc:LineCountNumeric>${lineCount}</cbc:LineCountNumeric>
   ${dueDate(doc)}
@@ -261,7 +261,7 @@ export class XmlGeneratorService {
     <cbc:LineExtensionAmount currencyID="${doc.currency}">${doc.subtotal}</cbc:LineExtensionAmount>
     <cbc:TaxExclusiveAmount currencyID="${doc.currency}">${doc.subtotal}</cbc:TaxExclusiveAmount>
     <cbc:TaxInclusiveAmount currencyID="${doc.currency}">${doc.grandTotal}</cbc:TaxInclusiveAmount>
-    <cbc:AllowanceTotalAmount currencyID="${doc.currency}">0.00</cbc:AllowanceTotalAmount>
+    <cbc:AllowanceTotalAmount currencyID="${doc.currency}">${totalDiscount(doc.lines)}</cbc:AllowanceTotalAmount>
     <cbc:ChargeTotalAmount currencyID="${doc.currency}">0.00</cbc:ChargeTotalAmount>
     <cbc:PrePaidAmount currencyID="${doc.currency}">0.00</cbc:PrePaidAmount>
     <cbc:PayableAmount currencyID="${doc.currency}">${doc.grandTotal}</cbc:PayableAmount>
@@ -340,8 +340,40 @@ ${subtotals}
 
 function invoiceLines(lines: readonly DraftLine[], currency: string): string {
   return lines.map((l, i) => {
-    const hasTax = l.taxTreatment === 'TAXED' && new Decimal(l.taxAmount).greaterThan(0);
-    const lineTaxBlock = hasTax ? `
+    const lineTaxBlock = lineTaxTotal(l, currency);
+    const hasDiscount = new Decimal(l.discountAmount).greaterThan(0);
+    const allowanceBlock = hasDiscount ? `
+    <cac:AllowanceCharge>
+      <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+      <cbc:AllowanceChargeReason>Descuento comercial</cbc:AllowanceChargeReason>
+      <cbc:Amount currencyID="${currency}">${l.discountAmount}</cbc:Amount>
+      <cbc:BaseAmount currencyID="${currency}">${l.grossAmount}</cbc:BaseAmount>
+    </cac:AllowanceCharge>` : '';
+
+    return `  <cac:InvoiceLine>
+    <cbc:ID>${i + 1}</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="${unitCode(l)}">${new Decimal(l.quantity).toFixed(6)}</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="${currency}">${new Decimal(l.grossAmount).minus(l.discountAmount).toFixed(2)}</cbc:LineExtensionAmount>${allowanceBlock}${lineTaxBlock}
+    <cac:Item>
+      <cbc:Description>${X(l.description)}</cbc:Description>
+      <cac:SellersItemIdentification>
+        <cbc:ID>${X(l.productId ?? `LINE-${i + 1}`)}</cbc:ID>
+      </cac:SellersItemIdentification>
+      <cac:StandardItemIdentification>
+        <cbc:ID schemeID="999" schemeName="UNSPSC">00000000</cbc:ID>
+      </cac:StandardItemIdentification>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="${currency}">${l.unitPrice}</cbc:PriceAmount>
+      <cbc:BaseQuantity unitCode="${unitCode(l)}">1.000000</cbc:BaseQuantity>
+    </cac:Price>
+  </cac:InvoiceLine>`;
+  }).join('\n');
+}
+
+function lineTaxTotal(l: DraftLine, currency: string): string {
+  if (l.taxTreatment === 'TAXED') {
+    return `
     <cac:TaxTotal>
       <cbc:TaxAmount currencyID="${currency}">${l.taxAmount}</cbc:TaxAmount>
       <cac:TaxSubtotal>
@@ -355,32 +387,60 @@ function invoiceLines(lines: readonly DraftLine[], currency: string): string {
           </cac:TaxScheme>
         </cac:TaxCategory>
       </cac:TaxSubtotal>
-    </cac:TaxTotal>` : '';
+    </cac:TaxTotal>`;
+  }
+  if (l.taxTreatment === 'EXEMPT') {
+    return `
+    <cac:TaxTotal>
+      <cbc:TaxAmount currencyID="${currency}">0.00</cbc:TaxAmount>
+      <cac:TaxSubtotal>
+        <cbc:TaxableAmount currencyID="${currency}">${l.taxableBase}</cbc:TaxableAmount>
+        <cbc:TaxAmount currencyID="${currency}">0.00</cbc:TaxAmount>
+        <cac:TaxCategory>
+          <cbc:Percent>0.00</cbc:Percent>
+          <cac:TaxScheme>
+            <cbc:ID>01</cbc:ID>
+            <cbc:Name>IVA</cbc:Name>
+          </cac:TaxScheme>
+        </cac:TaxCategory>
+      </cac:TaxSubtotal>
+    </cac:TaxTotal>`;
+  }
+  if (l.taxTreatment === 'EXCLUDED' || l.taxTreatment === 'NON_TAXED') {
+    return `
+    <cac:TaxTotal>
+      <cbc:TaxAmount currencyID="${currency}">0.00</cbc:TaxAmount>
+      <cac:TaxSubtotal>
+        <cbc:TaxableAmount currencyID="${currency}">${l.taxableBase}</cbc:TaxableAmount>
+        <cbc:TaxAmount currencyID="${currency}">0.00</cbc:TaxAmount>
+        <cac:TaxCategory>
+          <cbc:Percent>0.00</cbc:Percent>
+          <cac:TaxScheme>
+            <cbc:ID>ZZ</cbc:ID>
+            <cbc:Name>No aplica</cbc:Name>
+          </cac:TaxScheme>
+        </cac:TaxCategory>
+      </cac:TaxSubtotal>
+    </cac:TaxTotal>`;
+  }
+  return '';
+}
 
-    return `  <cac:InvoiceLine>
-    <cbc:ID>${i + 1}</cbc:ID>
-    <cbc:InvoicedQuantity unitCode="94">${new Decimal(l.quantity).toFixed(6)}</cbc:InvoicedQuantity>
-    <cbc:LineExtensionAmount currencyID="${currency}">${new Decimal(l.grossAmount).minus(l.discountAmount).toFixed(2)}</cbc:LineExtensionAmount>
-    <cbc:FreeOfChargeIndicator>false</cbc:FreeOfChargeIndicator>
-    <cac:AllowanceCharge>
-      <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
-      <cbc:AllowanceChargeReason>Descuento comercial</cbc:AllowanceChargeReason>
-      <cbc:Amount currencyID="${currency}">${l.discountAmount}</cbc:Amount>
-      <cbc:BaseAmount currencyID="${currency}">${l.grossAmount}</cbc:BaseAmount>
-    </cac:AllowanceCharge>${lineTaxBlock}
-    <cac:Item>
-      <cbc:Description>${X(l.description)}</cbc:Description>
-      <cac:SellersItemIdentification>
-        <cbc:ID>${X(l.productId ?? `LINE-${i + 1}`)}</cbc:ID>
-      </cac:SellersItemIdentification>
-      <cac:StandardItemIdentification>
-        <cbc:ID schemeID="999" schemeName="UNSPSC">00000000</cbc:ID>
-      </cac:StandardItemIdentification>
-    </cac:Item>
-    <cac:Price>
-      <cbc:PriceAmount currencyID="${currency}">${l.unitPrice}</cbc:PriceAmount>
-      <cbc:BaseQuantity unitCode="94">1.000000</cbc:BaseQuantity>
-    </cac:Price>
-  </cac:InvoiceLine>`;
-  }).join('\n');
+// UN/ECE unit codes — map from product unit_of_measure; default 94 = "pieces" (EA)
+const UNIT_CODES: Record<string, string> = {
+  UNIDAD: '94', UNIDADES: '94', EA: '94', UN: '94',
+  KG: 'KGM', KILOGRAMO: 'KGM', KILOGRAMOS: 'KGM',
+  LT: 'LTR', LITRO: 'LTR', LITROS: 'LTR',
+  MT: 'MTR', METRO: 'MTR', METROS: 'MTR',
+  M2: 'MTK', M3: 'MTQ',
+  DIA: 'DAY', HORA: 'HUR', HORAS: 'HUR', MES: 'MON',
+  SERVICIO: '94', SERVICIO_PROFESIONAL: '94',
+};
+function unitCode(l: DraftLine): string {
+  const raw = (l as { unitOfMeasure?: string }).unitOfMeasure?.toUpperCase() ?? '';
+  return UNIT_CODES[raw] ?? '94';
+}
+
+function totalDiscount(lines: readonly DraftLine[]): string {
+  return lines.reduce((acc, l) => acc.plus(l.discountAmount), new Decimal(0)).toFixed(2);
 }

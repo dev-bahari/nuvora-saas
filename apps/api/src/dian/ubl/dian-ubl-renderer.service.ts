@@ -14,10 +14,13 @@ export class DianUblRendererService {
     const quantity = credit ? 'CreditedQuantity' : 'DebitedQuantity';
     if (!source) throw new Error('Las notas requieren la referencia fiscal de la factura origen');
     const reference = `<cac:DiscrepancyResponse><cbc:ReferenceID>${escapeXml(source.number)}</cbc:ReferenceID><cbc:ResponseCode>${escapeXml(document.reasonCode ?? (credit ? '1' : '2'))}</cbc:ResponseCode><cbc:Description>${escapeXml(document.notes ?? (credit ? 'Nota crédito' : 'Nota débito'))}</cbc:Description></cac:DiscrepancyResponse><cac:BillingReference><cac:InvoiceDocumentReference><cbc:ID>${escapeXml(source.number)}</cbc:ID><cbc:UUID schemeName="CUFE-SHA384">${escapeXml(source.uuid)}</cbc:UUID><cbc:IssueDate>${source.issueDate}</cbc:IssueDate></cac:InvoiceDocumentReference></cac:BillingReference>`;
+    // CustomizationID per AT 1.9 §2.2: 22 = NC que anula, 30 = ND general
+    const customizationId = credit ? '22' : '30';
     xml = xml
       .replace(/xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"/, `xmlns="urn:oasis:names:specification:ubl:schema:xsd:${root}-2"`)
       .replace('<Invoice ', `<${root} `).replace('</Invoice>', `</${root}>`)
-      .replace(/<cbc:InvoiceTypeCode[^>]*>01<\/cbc:InvoiceTypeCode>/, `<cbc:${root}TypeCode>${credit ? '91' : '92'}</cbc:${root}TypeCode>`)
+      .replace(/<cbc:CustomizationID>[^<]+<\/cbc:CustomizationID>/, `<cbc:CustomizationID>${customizationId}</cbc:CustomizationID>`)
+      .replace(/<cbc:InvoiceTypeCode[^>]*>01<\/cbc:InvoiceTypeCode>/, `<cbc:${root}TypeCode listAgencyID="6" listAgencyName="United Nations Economic Commission for Europe" listID="UN/ECE 1001 Invoice Type" listSchemeURI="urn:oasis:names:specification:ubl:codelist:gc:InvoiceTypeCode-2.1">${credit ? '91' : '92'}<\/cbc:${root}TypeCode>`)
       .replace('schemeName="CUFE-SHA384"', 'schemeName="CUDE-SHA384"')
       .replace(/(<cbc:LineCountNumeric>[^<]+<\/cbc:LineCountNumeric>)/, `$1${reference}`)
       .replaceAll('cac:InvoiceLine', `cac:${line}`).replaceAll('cbc:InvoicedQuantity', `cbc:${quantity}`);

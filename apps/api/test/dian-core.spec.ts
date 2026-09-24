@@ -99,11 +99,22 @@ describe('DIAN cryptography and transport', () => {
     expect(xml).toContain(`<${root} `);
     expect(xml).toContain(`<cac:${line}>`);
     expect(xml).not.toContain('placeholder');
+    expect(xml).not.toContain('FreeOfChargeIndicator');
+    expect(xml).toContain('languageLocaleID="es"');
+    expect(xml).toContain('<cac:TaxTotal>');
     expect(xml).toContain('<sts:InvoiceAuthorization>18760000001</sts:InvoiceAuthorization>');
-    if (documentType !== 'INVOICE') {
+    if (documentType === 'INVOICE') {
+      expect(xml).toContain('<cbc:CustomizationID>10</cbc:CustomizationID>');
+    } else if (documentType === 'CREDIT_NOTE') {
+      expect(xml).toContain('<cbc:CustomizationID>22</cbc:CustomizationID>');
+      expect(xml).toContain('schemeName="CUDE-SHA384"');
       expect(xml).toContain('<cac:BillingReference>');
       expect(xml).toContain('<cac:DiscrepancyResponse>');
       expect(xml).toContain('<cac:InvoiceDocumentReference>');
+    } else {
+      expect(xml).toContain('<cbc:CustomizationID>30</cbc:CustomizationID>');
+      expect(xml).toContain('schemeName="CUDE-SHA384"');
+      expect(xml).toContain('<cac:BillingReference>');
     }
   });
 
