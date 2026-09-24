@@ -18,7 +18,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'No pudimos conectar. Inténtalo de nuevo.' }, { status: 502 });
     }
   }
-  const response = NextResponse.redirect(new URL('/login', request.url), 303);
+  const proto = request.headers.get('x-forwarded-proto') ?? 'http';
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? 'localhost:3000';
+  const response = NextResponse.redirect(new URL('/login', `${proto}://${host}`), 303);
   response.cookies.set('nuvora_session', '', { maxAge: 0, path: '/', httpOnly: true, sameSite: 'lax', secure: process.env['NODE_ENV'] === 'production' });
   response.cookies.set('nuvora_csrf', '', { maxAge: 0, path: '/', sameSite: 'strict', secure: process.env['NODE_ENV'] === 'production' });
   return response;
