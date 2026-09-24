@@ -35,6 +35,12 @@ export class PfxChainLoaderService {
       chain.push(issuer);
     }
     if (chain.length < 3) throw new Error('Se requieren certificado firmante, CA intermedia y CA raíz');
+    const privateKey = keyBag as forge.pki.rsa.PrivateKey;
+    const publicKey = leaf.publicKey as forge.pki.rsa.PublicKey;
+    if (privateKey.n.compareTo(publicKey.n) !== 0 || privateKey.e.compareTo(publicKey.e) !== 0) throw new Error('La llave privada no corresponde al certificado firmante');
+    if (!isCa(chain[1]!) || !isCa(chain[2]!)) throw new Error('La cadena no contiene CA intermedia y raíz válidas');
+    if (!chain[1]!.verify(chain[0]!) || !chain[2]!.verify(chain[1]!)) throw new Error('La cadena de certificados tiene una firma inválida');
+    if (chain[2]!.issuer.hash !== chain[2]!.subject.hash || !chain[2]!.verify(chain[2]!)) throw new Error('La CA raíz no es autofirmada o no es confiable');
     const now = new Date();
     for (const cert of chain) if (cert.validity.notBefore > now || cert.validity.notAfter < now) throw new Error('La cadena contiene un certificado vencido o aún no válido');
 

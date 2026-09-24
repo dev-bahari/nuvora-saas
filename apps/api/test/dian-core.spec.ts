@@ -49,6 +49,13 @@ function pkiFixture() {
   };
 }
 
+function mismatchedPfxFixture() {
+  const fixture = pkiFixture();
+  const wrongKeys = forge.pki.rsa.generateKeyPair(1024);
+  const asn1 = forge.pkcs12.toPkcs12Asn1(wrongKeys.privateKey, [fixture.leaf], fixture.password, { algorithm: '3des' });
+  return { ...fixture, pfx: Buffer.from(forge.asn1.toDer(asn1).getBytes(), 'binary') };
+}
+
 const baseDocument: DraftDocument = {
   id: '00000000-0000-0000-0000-000000000001', tenantId: '00000000-0000-0000-0000-000000000002',
   documentType: 'INVOICE', status: 'PROCESSING', version: 1, customerId: null,
@@ -77,15 +84,27 @@ describe('DIAN cryptography and transport', () => {
     expect(loaded.fingerprint).toMatch(/^[A-F0-9:]+$/);
   });
 
+  it('rejects a PFX whose private key does not match the signer certificate', () => {
+    const fixture = mismatchedPfxFixture();
+    expect(() => new PfxChainLoaderService().load(fixture.pfx, fixture.password, fixture.chain)).toThrow(/llave privada/i);
+  });
+
   it.each([
     ['INVOICE', 'Invoice', 'InvoiceLine'],
     ['CREDIT_NOTE', 'CreditNote', 'CreditNoteLine'],
     ['DEBIT_NOTE', 'DebitNote', 'DebitNoteLine'],
   ] as const)('renders %s as UBL %s', (documentType, root, line) => {
-    const xml = new DianUblRendererService().render({ ...baseDocument, documentType }, tenant).toString();
+    const document = { ...baseDocument, documentType };
+    const xml = new DianUblRendererService().render(document, { ...tenant, invoiceAuthorization: '18760000001', authorizationPrefix: 'SETP', authorizationFrom: '990000000', authorizationTo: '995000000', authorizationStartDate: '2019-01-19', authorizationEndDate: '2030-01-19' }, documentType === 'INVOICE' ? undefined : { number: 'SETP990000000', uuid: 'b'.repeat(96), issueDate: '2026-09-23' }).toString();
     expect(xml).toContain(`<${root} `);
     expect(xml).toContain(`<cac:${line}>`);
     expect(xml).not.toContain('placeholder');
+    expect(xml).toContain('<sts:InvoiceAuthorization>18760000001</sts:InvoiceAuthorization>');
+    if (documentType !== 'INVOICE') {
+      expect(xml).toContain('<cac:BillingReference>');
+      expect(xml).toContain('<cac:DiscrepancyResponse>');
+      expect(xml).toContain('<cac:InvoiceDocumentReference>');
+    }
   });
 
   it('creates a verifiable XMLDSig carrying XAdES signed properties and the full chain', () => {
@@ -129,5 +148,15 @@ describe('DIAN cryptography and transport', () => {
     expect(requestBody).toContain('SendTestSetAsync');
     expect(requestBody).toContain('<wcf:testSetId>set-1</wcf:testSetId>');
     expect(result.outcome).toBe('PENDING');
+  });
+
+  it('signs SOAP with WS-Addressing and builds GetStatusZip polling', async () => {
+    const fixture = pkiFixture(); const credentials = new PfxChainLoaderService().load(fixture.pfx, fixture.password, fixture.chain);
+    const requests: string[] = [];
+    const client = new DianSoapClient(async (_url, init) => { requests.push(String(init?.body)); return new Response('<StatusCode>00</StatusCode><StatusDescription>Aceptado</StatusDescription>'); });
+    await client.sendTestSetAsync({ zipBase64: 'UEs=', testSetId: 'set-1', credentials });
+    await client.getStatusZip({ trackId: 'track-1', credentials });
+    expect(requests[0]).toContain('<a:Action'); expect(requests[0]).toContain('<a:To'); expect(requests[0]).toContain('BinarySecurityToken');
+    expect(requests[1]).toContain('<wcf:GetStatusZip>'); expect(requests[1]).toContain('<wcf:trackId>track-1</wcf:trackId>');
   });
 });

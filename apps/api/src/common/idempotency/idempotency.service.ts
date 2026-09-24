@@ -12,6 +12,7 @@ interface IdempotencyRow {
   status: IdempotencyStatus;
   request_hash: string;
   response_body: unknown;
+  inserted: boolean;
 }
 
 export class IdempotencyService {
@@ -48,12 +49,13 @@ export class IdempotencyService {
        VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (tenant_id, key_hash) DO UPDATE
          SET updated_at = NOW()
-       RETURNING id, status, request_hash, response_body`,
+       RETURNING id, status, request_hash, response_body, (xmax = 0) AS inserted`,
       [tenantId, keyHash, operation, requestHash, expiresAt],
     );
 
     const row = rows[0];
     if (!row) throw new Error('Idempotency insert failed');
+    if (row.inserted) return null;
 
     if (row.status === 'COMPLETED') {
       if (row.request_hash !== requestHash) {

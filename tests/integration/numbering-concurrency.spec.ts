@@ -13,6 +13,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
+import { randomUUID } from 'node:crypto';
 import { withTenant } from '../../apps/api/src/tenancy/tenant-transaction.js';
 import type { RequestContext } from '../../apps/api/src/tenancy/tenant-context.js';
 import { NumberingService } from '../../apps/api/src/numbering/numbering.service.js';
@@ -58,12 +59,9 @@ describe('Numbering & Idempotency Concurrency (Task 7)', () => {
       tenantAId = tA.rows[0]!.id;
       tenantBId = tB.rows[0]!.id;
 
-      const uA = await client.query<{ id: string }>(
-        `INSERT INTO users (email, full_name, password_hash) VALUES ('num-a@test.com', 'User A', 'x') RETURNING id`,
-      );
-      const uB = await client.query<{ id: string }>(
-        `INSERT INTO users (email, full_name, password_hash) VALUES ('num-b@test.com', 'User B', 'x') RETURNING id`,
-      );
+      const stamp = `${Date.now()}-${Math.random()}`;
+      const uA = await client.query<{ id: string }>(`INSERT INTO users (email, full_name, password_hash) VALUES ($1, 'User A', 'x') RETURNING id`, [`num-a-${stamp}@test.com`]);
+      const uB = await client.query<{ id: string }>(`INSERT INTO users (email, full_name, password_hash) VALUES ($1, 'User B', 'x') RETURNING id`, [`num-b-${stamp}@test.com`]);
       userAId = uA.rows[0]!.id;
       userBId = uB.rows[0]!.id;
     } finally {
@@ -113,7 +111,8 @@ describe('Numbering & Idempotency Concurrency (Task 7)', () => {
 
   it('replay: same idempotency key returns stored response, number not consumed twice', async () => {
     const key = `idem-replay-${Date.now()}`;
-    const body = { documentId: 'doc-abc' };
+    const documentId = randomUUID();
+    const body = { documentId };
 
     let firstResult: unknown = null;
 
@@ -125,7 +124,7 @@ describe('Numbering & Idempotency Concurrency (Task 7)', () => {
       const reserved = await numbering.reserveNextNumber(tx, ctxA.tenantId, 'INVOICE');
       firstResult = { number: reserved.number };
 
-      await IdempotencyService.complete(tx, ctxA.tenantId, 'invoices.issue', key, firstResult, 'doc-abc');
+      await IdempotencyService.complete(tx, ctxA.tenantId, 'invoices.issue', key, firstResult, documentId);
     });
 
     // Replay call — must return same result without reserving another number

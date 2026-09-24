@@ -345,7 +345,7 @@ export class IssueDocumentService {
           tenantId: ctx.tenantId,
           documentId: job.document_id,
           eventType: `document.${finalStatus.toLowerCase()}.worker`,
-          requestId: (JSON.parse(job.payload) as { requestId?: string }).requestId,
+          requestId: (typeof job.payload === 'string' ? JSON.parse(job.payload) : job.payload as { requestId?: string }).requestId,
           payload: { trackingId: dianResult.trackingId },
         });
       });

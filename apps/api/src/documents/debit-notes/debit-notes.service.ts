@@ -62,7 +62,7 @@ export class DebitNotesService {
     dto: CreateDebitNoteDto,
   ): Promise<DraftDocument> {
     if (HIGHER_VALUE_REASONS.has(dto.reasonCode)) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Para mayor valor usa "Crear factura adicional" en lugar de nota débito (motivo: ${dto.reasonCode})`,
       );
     }

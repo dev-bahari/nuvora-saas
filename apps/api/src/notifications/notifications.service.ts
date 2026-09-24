@@ -89,17 +89,13 @@ export class NotificationsService {
     }
 
     // Log result — append-only table
-    const client = await this.pool().connect();
-    try {
-      await client.query(`SET LOCAL app.tenant_id = $1`, [ctx.tenantId]);
-      await client.query(
+    await withTenant(this.pool(), ctx, (tx) =>
+      tx.query(
         `INSERT INTO notification_log (tenant_id, channel_id, document_id, event_type, channel_type, status, error_message)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [ctx.tenantId, channel.id, documentId, event, channel.channel_type, status, errorMessage ?? null],
-      );
-    } finally {
-      client.release();
-    }
+      ),
+    );
   }
 
   private async sendEmail(

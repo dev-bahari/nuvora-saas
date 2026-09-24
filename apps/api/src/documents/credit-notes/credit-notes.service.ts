@@ -42,17 +42,20 @@ export class CreditNotesService {
   constructor(
     private readonly numbering: NumberingService,
     private readonly audit: AuditService,
-    private readonly dian: MockDianProvider,
+    dianOrPool: MockDianProvider | pg.Pool,
     customPool?: pg.Pool,
     @Optional() private readonly accounting?: AccountingService,
   ) {
+    this.dian = dianOrPool instanceof pg.Pool ? new MockDianProvider() : dianOrPool;
     this.pool =
-      customPool ??
+      (dianOrPool instanceof pg.Pool ? dianOrPool : customPool) ??
       new pg.Pool({
         connectionString:
           process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5432/nuvora',
       });
   }
+
+  private readonly dian: MockDianProvider;
 
   /**
    * Creates and immediately issues a credit note against an ISSUED invoice.
@@ -68,17 +71,18 @@ export class CreditNotesService {
     const nc = await withTenant(this.pool, ctx, async (tx) => {
       // Validate source document
       const { rows: sourceRows } = await tx.query<{
-        id: string; status: string; grand_total: string; subtotal: string; total_tax: string;
+        id: string; status: string; document_type: string; grand_total: string; subtotal: string; total_tax: string;
         customer_snapshot: DraftDocument['customerSnapshot'];
         currency: string; issue_date: string;
       }>(
-        `SELECT id, status, grand_total, subtotal, total_tax, customer_snapshot, currency, issue_date
+        `SELECT id, status, document_type, grand_total, subtotal, total_tax, customer_snapshot, currency, issue_date
          FROM fiscal_documents WHERE id = $1`,
         [sourceDocumentId],
       );
       const source = sourceRows[0];
       sourceDoc = source;
       if (!source) throw new NotFoundException('Source invoice not found');
+      if (source.document_type !== 'INVOICE') throw new UnprocessableEntityException('Credit notes can only reference an invoice');
       if (source.status !== 'ISSUED') {
         throw new UnprocessableEntityException(
           `Cannot create credit note against document with status "${source.status}"`,

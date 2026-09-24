@@ -16,6 +16,12 @@ export interface TenantInfo {
   dianSoftwareId: string | null;
   dianSoftwarePin: string | null;
   dianTechnicalKey: string | null;
+  invoiceAuthorization?: string;
+  authorizationPrefix?: string;
+  authorizationFrom?: string;
+  authorizationTo?: string;
+  authorizationStartDate?: string;
+  authorizationEndDate?: string;
 }
 
 // Colombian identification type → DIAN schemeID
@@ -37,7 +43,7 @@ const X = escapeXml;
  */
 @Injectable()
 export class XmlGeneratorService {
-  constructor(private readonly cufe: CufeService) {}
+  constructor(private readonly cufe = new CufeService()) {}
 
   generate(doc: DraftDocument, tenant?: TenantInfo): Buffer {
     const env = tenant?.dianEnvironment ?? 'HABILITACION';
@@ -91,15 +97,15 @@ export class XmlGeneratorService {
       <ext:ExtensionContent>
         <sts:DianExtensions>
           <sts:InvoiceControl>
-            <sts:InvoiceAuthorization>0</sts:InvoiceAuthorization>
+            <sts:InvoiceAuthorization>${X(tenant?.invoiceAuthorization ?? '')}</sts:InvoiceAuthorization>
             <sts:AuthorizationPeriod>
-              <cbc:StartDate>${doc.issueDate}</cbc:StartDate>
-              <cbc:EndDate>2099-12-31</cbc:EndDate>
+              <cbc:StartDate>${tenant?.authorizationStartDate ?? doc.issueDate}</cbc:StartDate>
+              <cbc:EndDate>${tenant?.authorizationEndDate ?? doc.issueDate}</cbc:EndDate>
             </sts:AuthorizationPeriod>
             <sts:AuthorizedInvoices>
-              <sts:Prefix>${X(doc.numberPrefix ?? 'SETP')}</sts:Prefix>
-              <sts:From>1</sts:From>
-              <sts:To>99999999</sts:To>
+              <sts:Prefix>${X(tenant?.authorizationPrefix ?? doc.numberPrefix ?? '')}</sts:Prefix>
+              <sts:From>${X(tenant?.authorizationFrom ?? '')}</sts:From>
+              <sts:To>${X(tenant?.authorizationTo ?? '')}</sts:To>
             </sts:AuthorizedInvoices>
           </sts:InvoiceControl>
           <sts:InvoiceSource>
@@ -354,7 +360,7 @@ function invoiceLines(lines: readonly DraftLine[], currency: string): string {
     return `  <cac:InvoiceLine>
     <cbc:ID>${i + 1}</cbc:ID>
     <cbc:InvoicedQuantity unitCode="94">${new Decimal(l.quantity).toFixed(6)}</cbc:InvoicedQuantity>
-    <cbc:LineExtensionAmount currencyID="${currency}">${l.lineTotal}</cbc:LineExtensionAmount>
+    <cbc:LineExtensionAmount currencyID="${currency}">${new Decimal(l.grossAmount).minus(l.discountAmount).toFixed(2)}</cbc:LineExtensionAmount>
     <cbc:FreeOfChargeIndicator>false</cbc:FreeOfChargeIndicator>
     <cac:AllowanceCharge>
       <cbc:ChargeIndicator>false</cbc:ChargeIndicator>

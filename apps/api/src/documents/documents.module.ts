@@ -13,6 +13,7 @@ import { AccountingModule } from '../accounting/accounting.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { SettingsModule } from '../settings/settings.module.js';
 import { DianSubmissionController } from './dian-submission.controller.js';
+import { DianSubmissionQueueService } from './dian-submission-queue.service.js';
 
 @Module({
   imports: [NumberingModule, AuditModule, DianModule, AccountingModule, NotificationsModule, SettingsModule],
@@ -21,6 +22,7 @@ import { DianSubmissionController } from './dian-submission.controller.js';
     IssueDocumentService,
     CreditNotesService,
     DebitNotesService,
+    DianSubmissionQueueService,
   ],
   controllers: [
     DocumentsController,

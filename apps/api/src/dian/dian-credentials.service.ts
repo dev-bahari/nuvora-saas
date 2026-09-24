@@ -5,7 +5,7 @@ import type { RequestContext } from '../tenancy/tenant-context.js';
 import { DianSecretService, type SealedSecret } from './secrets/dian-secret.service.js';
 import { PfxChainLoaderService } from './signing/pfx-chain-loader.service.js';
 
-export interface DianCredentialInput { pfxBase64: string; password: string; caChainBase64: string; softwareId: string; softwarePin: string; technicalKey: string; testSetId: string; }
+export interface DianCredentialInput { pfxBase64: string; password: string; caChainBase64: string; softwareId: string; softwarePin: string; technicalKey: string; testSetId: string; invoiceAuthorization: string; authorizationPrefix: string; authorizationFrom: string; authorizationTo: string; authorizationStartDate: string; authorizationEndDate: string; }
 interface StoredSecret { pfx: string; password: string; caChain: string; softwarePin: string; technicalKey: string; }
 
 @Injectable()
@@ -16,33 +16,33 @@ export class DianCredentialsService {
   }
 
   async save(ctx: RequestContext, input: DianCredentialInput) {
-    if (![input.pfxBase64, input.password, input.caChainBase64, input.softwareId, input.softwarePin, input.testSetId].every(Boolean)) throw new BadRequestException('Faltan credenciales DIAN obligatorias');
+    if (![input.pfxBase64, input.password, input.caChainBase64, input.softwareId, input.softwarePin, input.testSetId, input.invoiceAuthorization, input.authorizationPrefix, input.authorizationFrom, input.authorizationTo, input.authorizationStartDate, input.authorizationEndDate].every(Boolean)) throw new BadRequestException('Faltan credenciales o datos de resolución DIAN obligatorios');
     const pfx = decode(input.pfxBase64, 'PFX');
     const chain = decode(input.caChainBase64, 'cadena CA');
     const loaded = this.loader.load(pfx, input.password, chain);
     const sealed = this.secrets.seal(Buffer.from(JSON.stringify({ pfx: input.pfxBase64, password: input.password, caChain: input.caChainBase64, softwarePin: input.softwarePin, technicalKey: input.technicalKey } satisfies StoredSecret)));
     await withTenant(this.pool, ctx, (tx) => tx.query(
-      `INSERT INTO dian_credentials (tenant_id, secret_ciphertext, secret_iv, secret_auth_tag, software_id, certificate_fingerprint, certificate_expires_at, test_set_id, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'READY') ON CONFLICT (tenant_id) DO UPDATE SET secret_ciphertext=EXCLUDED.secret_ciphertext, secret_iv=EXCLUDED.secret_iv, secret_auth_tag=EXCLUDED.secret_auth_tag, software_id=EXCLUDED.software_id, certificate_fingerprint=EXCLUDED.certificate_fingerprint, certificate_expires_at=EXCLUDED.certificate_expires_at, test_set_id=EXCLUDED.test_set_id, status='READY', last_message=NULL, updated_at=NOW()`,
-      [ctx.tenantId, sealed.ciphertext, sealed.iv, sealed.authTag, input.softwareId, loaded.fingerprint, loaded.expiresAt, input.testSetId],
+      `INSERT INTO dian_credentials (tenant_id, secret_ciphertext, secret_iv, secret_auth_tag, software_id, certificate_fingerprint, certificate_expires_at, test_set_id, status, invoice_authorization, authorization_prefix, authorization_from, authorization_to, authorization_start_date, authorization_end_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'READY',$9,$10,$11,$12,$13,$14) ON CONFLICT (tenant_id) DO UPDATE SET secret_ciphertext=EXCLUDED.secret_ciphertext, secret_iv=EXCLUDED.secret_iv, secret_auth_tag=EXCLUDED.secret_auth_tag, software_id=EXCLUDED.software_id, certificate_fingerprint=EXCLUDED.certificate_fingerprint, certificate_expires_at=EXCLUDED.certificate_expires_at, test_set_id=EXCLUDED.test_set_id, invoice_authorization=EXCLUDED.invoice_authorization, authorization_prefix=EXCLUDED.authorization_prefix, authorization_from=EXCLUDED.authorization_from, authorization_to=EXCLUDED.authorization_to, authorization_start_date=EXCLUDED.authorization_start_date, authorization_end_date=EXCLUDED.authorization_end_date, status='READY', last_message=NULL, updated_at=NOW()`,
+      [ctx.tenantId, sealed.ciphertext, sealed.iv, sealed.authTag, input.softwareId, loaded.fingerprint, loaded.expiresAt, input.testSetId, input.invoiceAuthorization, input.authorizationPrefix, input.authorizationFrom, input.authorizationTo, input.authorizationStartDate, input.authorizationEndDate],
     ));
     return this.getStatus(ctx);
   }
 
   async getStatus(ctx: RequestContext) {
     return withTenant(this.pool, ctx, async (tx) => {
-      const { rows } = await tx.query<{ software_id:string; certificate_fingerprint:string; certificate_expires_at:Date; test_set_id:string; status:string; last_message:string|null }>(`SELECT software_id, certificate_fingerprint, certificate_expires_at, test_set_id, status, last_message FROM dian_credentials WHERE tenant_id=$1`, [ctx.tenantId]);
+      const { rows } = await tx.query<{ software_id:string; certificate_fingerprint:string; certificate_expires_at:Date; test_set_id:string; status:string; last_message:string|null; invoice_authorization:string|null; authorization_prefix:string|null; authorization_from:string|null; authorization_to:string|null; authorization_start_date:string|null; authorization_end_date:string|null }>(`SELECT software_id, certificate_fingerprint, certificate_expires_at, test_set_id, status, last_message, invoice_authorization, authorization_prefix, authorization_from::text, authorization_to::text, authorization_start_date::text, authorization_end_date::text FROM dian_credentials WHERE tenant_id=$1`, [ctx.tenantId]);
       const row = rows[0];
-      return row ? { configured: true, softwareId: row.software_id, fingerprint: row.certificate_fingerprint, expiresAt: row.certificate_expires_at.toISOString(), testSetId: row.test_set_id, status: row.status, message: row.last_message } : { configured: false, status: 'UNCONFIGURED' };
+      return row ? { configured: true, softwareId: row.software_id, fingerprint: row.certificate_fingerprint, expiresAt: row.certificate_expires_at.toISOString(), testSetId: row.test_set_id, status: row.status, message: row.last_message, invoiceAuthorization: row.invoice_authorization, authorizationPrefix: row.authorization_prefix, authorizationFrom: row.authorization_from, authorizationTo: row.authorization_to, authorizationStartDate: row.authorization_start_date, authorizationEndDate: row.authorization_end_date } : { configured: false, status: 'UNCONFIGURED' };
     });
   }
 
   async load(ctx: RequestContext) {
     return withTenant(this.pool, ctx, async (tx) => {
-      const { rows } = await tx.query<{ secret_ciphertext:Buffer; secret_iv:Buffer; secret_auth_tag:Buffer; software_id:string; test_set_id:string }>(`SELECT secret_ciphertext, secret_iv, secret_auth_tag, software_id, test_set_id FROM dian_credentials WHERE tenant_id=$1`, [ctx.tenantId]);
+      const { rows } = await tx.query<{ secret_ciphertext:Buffer; secret_iv:Buffer; secret_auth_tag:Buffer; software_id:string; test_set_id:string; invoice_authorization:string; authorization_prefix:string; authorization_from:string; authorization_to:string; authorization_start_date:string; authorization_end_date:string }>(`SELECT secret_ciphertext, secret_iv, secret_auth_tag, software_id, test_set_id, invoice_authorization, authorization_prefix, authorization_from::text, authorization_to::text, authorization_start_date::text, authorization_end_date::text FROM dian_credentials WHERE tenant_id=$1`, [ctx.tenantId]);
       const row = rows[0]; if (!row) throw new NotFoundException('Credenciales DIAN no configuradas');
       const sealed: SealedSecret = { ciphertext: row.secret_ciphertext, iv: row.secret_iv, authTag: row.secret_auth_tag };
-      return { ...JSON.parse(this.secrets.open(sealed).toString()) as StoredSecret, softwareId: row.software_id, testSetId: row.test_set_id };
+      return { ...JSON.parse(this.secrets.open(sealed).toString()) as StoredSecret, softwareId: row.software_id, testSetId: row.test_set_id, invoiceAuthorization: row.invoice_authorization, authorizationPrefix: row.authorization_prefix, authorizationFrom: row.authorization_from, authorizationTo: row.authorization_to, authorizationStartDate: row.authorization_start_date, authorizationEndDate: row.authorization_end_date };
     });
   }
 }

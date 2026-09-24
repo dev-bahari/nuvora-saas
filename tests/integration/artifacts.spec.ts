@@ -108,7 +108,7 @@ describe('Artifacts Integration Tests (Task 9)', () => {
     const xmlBuf = xmlGenerator.generate(draft);
     const xml = xmlBuf.toString('utf-8');
 
-    expect(xml).toContain('NUVORA MOCK DOCUMENT');
+    expect(xml).toContain('<Invoice ');
     expect(xml).toContain('Cliente Artefacto');
     expect(xml).toContain(draft.grandTotal);
   });

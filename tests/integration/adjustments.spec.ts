@@ -160,7 +160,7 @@ describe('Adjustments Integration Tests (Task 10)', () => {
 
     await expect(
       creditNotes.create(ctxA, nc.id, {}),
-    ).rejects.toThrow(UnprocessableEntityException);
+    ).rejects.toMatchObject({ status: 422 });
   });
 
   it('NC sobre documento DRAFT: rechazado con UnprocessableEntityException', async () => {
@@ -172,7 +172,7 @@ describe('Adjustments Integration Tests (Task 10)', () => {
 
     await expect(
       creditNotes.create(ctxA, draft.id, {}),
-    ).rejects.toThrow(UnprocessableEntityException);
+    ).rejects.toMatchObject({ status: 422 });
   });
 
   it('RLS: tenant B no puede crear NC sobre factura de tenant A', async () => {
@@ -217,7 +217,7 @@ describe('Adjustments Integration Tests (Task 10)', () => {
         reasonCode: 'HIGHER_VALUE',
         lines: [{ description: 'Mayor valor', quantity: '1', unitPrice: '200000', discountPct: 0, taxTreatment: 'TAXED', taxRate: 19 }],
       }),
-    ).rejects.toThrow(UnprocessableEntityException);
+    ).rejects.toMatchObject({ status: 422 });
   });
 
   it('ND con PRICE_INCREASE: rechazado con UnprocessableEntityException', async () => {
@@ -228,7 +228,7 @@ describe('Adjustments Integration Tests (Task 10)', () => {
         reasonCode: 'PRICE_INCREASE',
         lines: [],
       }),
-    ).rejects.toThrow(UnprocessableEntityException);
+    ).rejects.toMatchObject({ status: 422 });
   });
 
   it('RLS: tenant B no puede crear ND sobre factura de tenant A', async () => {
