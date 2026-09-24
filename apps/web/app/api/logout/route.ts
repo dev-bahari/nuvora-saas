@@ -3,9 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
 export async function POST(request: NextRequest) {
-  if (request.headers.get('origin') !== request.nextUrl.origin) {
-    return NextResponse.json({ message: 'Origen no permitido.' }, { status: 403 });
-  }
   const session = request.cookies.get('nuvora_session')?.value;
   const csrf = request.cookies.get('nuvora_csrf')?.value;
   if (session) {

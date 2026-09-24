@@ -6,7 +6,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/ToastProvider';
 import { PageHeader } from '@/components/ui/PageHeader';
 
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
+const SETTINGS_URL = '/api/settings';
 
 interface Settings {
   legalName: string;
@@ -63,7 +63,7 @@ export default function SettingsPage() {
   const toast = useToast();
 
   useEffect(() => {
-    fetch(`${API_URL}/settings`, { credentials: 'include' })
+    fetch(SETTINGS_URL)
       .then((r) => r.ok ? r.json() : null)
       .then((data: Settings | null) => {
         if (data) setForm({ ...data, dianSoftwareId: data.dianSoftwareId ?? '' });
@@ -77,9 +77,8 @@ export default function SettingsPage() {
   }
 
   async function saveEmpresa() {
-    const res = await fetch(`${API_URL}/settings`, {
+    const res = await fetch(SETTINGS_URL, {
       method: 'PUT',
-      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...empresaForm,
@@ -104,9 +103,8 @@ export default function SettingsPage() {
   }
 
   async function saveDian() {
-    const res = await fetch(`${API_URL}/settings`, {
+    const res = await fetch(SETTINGS_URL, {
       method: 'PUT',
-      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...form,
