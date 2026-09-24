@@ -361,7 +361,7 @@ export function InvoiceEditor({ customers, taxes }: { customers: Customer[]; tax
                       className="input mt-1"
                       value={`${line.taxTreatment}:${line.taxRate}`}
                       onChange={e => {
-                        const [treatment, code] = e.target.value.split(':');
+                        const [treatment = '', code = ''] = e.target.value.split(':');
                         autoFillTax(line.id, treatment, code);
                       }}
                     >
