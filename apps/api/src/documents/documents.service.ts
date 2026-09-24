@@ -56,6 +56,11 @@ interface DocumentRow {
   created_by: string | null;
   created_at: Date;
   updated_at: Date;
+  number_prefix?: string | null;
+  document_number?: string | null;
+  cude?: string | null;
+  source_document_id?: string | null;
+  reason_code?: string | null;
 }
 
 interface LineRow {
@@ -203,6 +208,11 @@ function mapDocument(
     lines: lines.map((l, i) => mapLine(l, i)),
     taxSummary: taxes.map(mapTaxSummary),
     aiu: aiu ? mapAIU(aiu) : null,
+    ...(doc.number_prefix ? { numberPrefix: doc.number_prefix } : {}),
+    ...(doc.document_number ? { documentNumber: doc.document_number } : {}),
+    ...(doc.cude ? { cude: doc.cude } : {}),
+    sourceDocumentId: doc.source_document_id ?? null,
+    reasonCode: doc.reason_code ?? null,
     createdBy: doc.created_by,
     createdAt: doc.created_at.toISOString(),
     updatedAt: doc.updated_at.toISOString(),

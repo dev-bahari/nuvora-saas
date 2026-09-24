@@ -20,6 +20,8 @@ interface Settings {
   dianSoftwareId: string | null;
 }
 
+interface DianStatus { configured: boolean; status: string; fingerprint?: string; expiresAt?: string; testSetId?: string; message?: string | null }
+
 function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-1">
@@ -55,7 +57,8 @@ export default function SettingsPage() {
 
   // DIAN dialog
   const [dianOpen, setDianOpen] = useState(false);
-  const [dianForm, setDianForm] = useState({ softwareId: '', pin: '', environment: 'HABILITACION' as Settings['dianEnvironment'] });
+  const [dianStatus, setDianStatus] = useState<DianStatus>({ configured: false, status: 'UNCONFIGURED' });
+  const [dianForm, setDianForm] = useState({ softwareId: '', pin: '', password: '', technicalKey: '', testSetId: '', pfx: null as File | null, chain: null as File | null, environment: 'HABILITACION' as Settings['dianEnvironment'] });
   const [showPin, setShowPin] = useState(false);
   const [confirmDianOpen, setConfirmDianOpen] = useState(false);
   const dianFirstRef = useRef<HTMLSelectElement>(null);
@@ -69,6 +72,7 @@ export default function SettingsPage() {
         if (data) setForm({ ...data, dianSoftwareId: data.dianSoftwareId ?? '' });
       })
       .finally(() => setLoading(false));
+    fetch(`${API_URL}/settings/dian`, { credentials: 'include' }).then((r) => r.ok ? r.json() : null).then((data: DianStatus | null) => data && setDianStatus(data));
   }, []);
 
   function openEmpresa() {
@@ -98,24 +102,26 @@ export default function SettingsPage() {
   }
 
   function openDian() {
-    setDianForm({ softwareId: form.dianSoftwareId ?? '', pin: '', environment: form.dianEnvironment });
+    setDianForm({ softwareId: form.dianSoftwareId ?? '', pin: '', password: '', technicalKey: '', testSetId: dianStatus.testSetId ?? '', pfx: null, chain: null, environment: form.dianEnvironment });
     setShowPin(false);
     setDianOpen(true);
   }
 
   async function saveDian() {
-    const res = await fetch(`${API_URL}/settings`, {
+    if (!dianForm.pfx || !dianForm.chain) throw new Error('Selecciona el PFX y la cadena de certificados');
+    const [pfxBase64, caChainBase64] = await Promise.all([fileBase64(dianForm.pfx), fileBase64(dianForm.chain)]);
+    const res = await fetch(`${API_URL}/settings/dian/credentials`, {
       method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        ...form,
-        dianEnvironment: dianForm.environment,
-        dianSoftwareId: dianForm.softwareId || null,
-        dianSoftwarePin: dianForm.pin || null,
+        pfxBase64, caChainBase64, password: dianForm.password, softwareId: dianForm.softwareId,
+        softwarePin: dianForm.pin, technicalKey: dianForm.technicalKey, testSetId: dianForm.testSetId,
       }),
     });
     if (!res.ok) throw new Error('Error al guardar la configuración DIAN');
+    const status = await res.json() as DianStatus;
+    setDianStatus(status);
     setForm((prev) => ({ ...prev, dianEnvironment: dianForm.environment, dianSoftwareId: dianForm.softwareId || null }));
     setDianOpen(false);
     toast.success('Configuración DIAN actualizada');
@@ -164,6 +170,9 @@ export default function SettingsPage() {
             <InfoRow label="Ambiente" value={form.dianEnvironment === 'PRODUCCION' ? 'Producción' : 'Habilitación (pruebas)'} />
             <InfoRow label="Software ID" value={form.dianSoftwareId ? '••••••••' : '—'} />
             <InfoRow label="Software PIN" value="••••••••" />
+            <InfoRow label="Estado del set" value={dianStatus.status} />
+            <InfoRow label="Certificado" value={dianStatus.configured ? `${dianStatus.fingerprint?.slice(0, 23)}…` : 'Sin configurar'} />
+            {dianStatus.expiresAt && <InfoRow label="Vence" value={new Date(dianStatus.expiresAt).toLocaleDateString('es-CO')} />}
           </dl>
         </section>
 
@@ -253,6 +262,21 @@ export default function SettingsPage() {
               </button>
             </div>
           </Field>
+          <Field label="Clave técnica">
+            <input type="password" value={dianForm.technicalKey} onChange={(e) => setDianForm((p) => ({ ...p, technicalKey: e.target.value }))} className="input" autoComplete="new-password" required />
+          </Field>
+          <Field label="TestSetId" required>
+            <input type="text" value={dianForm.testSetId} onChange={(e) => setDianForm((p) => ({ ...p, testSetId: e.target.value }))} className="input" required />
+          </Field>
+          <Field label="Certificado PFX" required hint="Se cifra antes de almacenarse y nunca vuelve a mostrarse.">
+            <input type="file" accept=".pfx,.p12" onChange={(e) => setDianForm((p) => ({ ...p, pfx: e.target.files?.[0] ?? null }))} className="input" required />
+          </Field>
+          <Field label="Contraseña del PFX" required>
+            <input type="password" value={dianForm.password} onChange={(e) => setDianForm((p) => ({ ...p, password: e.target.value }))} className="input" autoComplete="new-password" required />
+          </Field>
+          <Field label="CA intermedia y raíz" required hint="Archivo PEM con ambos certificados.">
+            <input type="file" accept=".pem,.cer,.crt" onChange={(e) => setDianForm((p) => ({ ...p, chain: e.target.files?.[0] ?? null }))} className="input" required />
+          </Field>
           <div className="ui-dialog-actions">
             <button type="button" className="ui-button-secondary" onClick={() => setDianOpen(false)}>Cancelar</button>
             <button type="button" className="ui-button-primary" onClick={() => setConfirmDianOpen(true)}>Guardar</button>
@@ -271,4 +295,10 @@ export default function SettingsPage() {
       />
     </main>
   );
+}
+
+async function fileBase64(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
 }

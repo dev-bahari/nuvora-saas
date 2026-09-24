@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 // Skip all tests when servers are not running — syntactically valid, CI-safe.
 test.describe('Master data UI — customers', () => {
-  test.skip(({ browserName }) => process.env['E2E_SKIP'] === '1' || false, 'servers not running');
+  test.skip(() => process.env['E2E_SKIP'] === '1', 'servers not running');
 
   test('customer list: search, clear filter, open create dialog, accessible labels, save toast', async ({ page }) => {
     await page.goto('/app/customers');
@@ -48,7 +48,7 @@ test.describe('Master data UI — customers', () => {
 });
 
 test.describe('Master data UI — products', () => {
-  test.skip(({ browserName }) => process.env['E2E_SKIP'] === '1' || false, 'servers not running');
+  test.skip(() => process.env['E2E_SKIP'] === '1', 'servers not running');
 
   test('product list: search, active filter chip, open create dialog, accessible labels, save toast', async ({ page }) => {
     await page.goto('/app/products');

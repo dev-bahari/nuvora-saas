@@ -10,6 +10,23 @@
 
 ## Active ownership
 
+### 2026-09-24 — DIAN habilitation pilot implementation
+
+| Scope | Owner | Intended paths | Dependencies | Contract/version | Status | Next owner |
+|---|---|---|---|---|---|---|
+| DIAN UBL, PFX chain, XAdES, ZIP, SOAP and response parsing | backend_domain | `apps/api/src/dian/` except `dian-submission-worker.service.ts`, `apps/api/src/artifacts/xml-generator.service.ts`, `apps/api/test/dian-*.spec.ts`, `tests/fixtures/dian/`, dependency manifests if required | approved DIAN pilot spec/plan; guide repository | `dian-direct-v1` | active | platform_architect / primary |
+| DIAN credentials persistence, RLS, outbox and retry worker | platform_architect | `db/migrations/0014_dian_credentials.sql`, `apps/api/src/dian/dian-submission-worker.service.ts`, `apps/api/src/jobs/`, `tests/integration/dian-credentials.spec.ts`, `tests/integration/dian-submission-worker.spec.ts`, dependency manifests only for `pg-boss` | `dian-direct-v1`; backend port and signed-package contract | `dian-jobs-v1` | active | primary |
+| DIAN settings and test-set progress UI | frontend_design | `apps/web/app/app/settings/dian/`, DIAN-specific web components/tests only | API contract below; existing panel design system | `dian-settings-ui-v1` | active | primary |
+
+Contract: `dian-direct-v1`
+- Owner / consumers: backend_domain / platform_architect, frontend_design, primary.
+- Signatures: `FiscalAuthorityProvider.submit(input): Promise<DianSubmissionResult>`; `poll(input): Promise<DianSubmissionResult>`; outcomes `ACCEPTED | REJECTED | PENDING | ERROR`.
+- API surface: `GET /settings/dian` returns only masked metadata and progress; `PUT /settings/dian/credentials` accepts multipart PFX, optional CA chain, password, software PIN, technical key and test-set ID; `POST /settings/dian/submissions` confirms queueing.
+- State owner: API/worker owns `UNCONFIGURED -> CONFIGURED -> READY -> SUBMITTING -> ACCEPTED|REJECTED|PENDING|ERROR`.
+- Invariants: pilot tenant only for direct DIAN; RLS on every row; secrets encrypted and never returned/logged; immutable signed payloads; decimal strings; idempotent jobs.
+- Compatibility: additive migration first, backend second, UI last; mock remains default.
+- Evidence: unit fixtures for PFX/XAdES/UBL/SOAP, two-tenant RLS, duplicate/retry recovery, API contract, UI E2E, fresh quality gate.
+
 ### 2026-09-22 — Authenticated panel UI redesign
 
 | Scope | Owner | Intended paths | Dependencies | Contract/version | Status | Next owner |
@@ -141,3 +158,11 @@ Ruling: Task 1 may replace only the legacy internal invoice navigation anchor wi
 - Remaining work: start Foundation from the approved implementation plan; publish each feature contract before consumers implement.
 - Next owner: `modular_architect` for Foundation boundaries.
 - QA evidence: validation outputs from this setup turn; final independent QA review requested after this handoff.
+### 2026-09-24 — Motor DIAN de habilitación
+
+- Owner: primary.
+- Scope completed: credenciales cifradas por tenant, cadena PFX de tres certificados, UBL factura/NC/ND, XAdES, ZIP, SOAP WS-Security `SendTestSetAsync`, parser de estados, exclusión de jobs duplicados y panel DIAN.
+- Contract: `dian-direct-v1`; secretos son write-only y el modo directo permanece restringido al tenant piloto.
+- Tests: `apps/api/test/dian-core.spec.ts` cubre cifrado, PFX, UBL, firma verificable, ZIP, SOAP y mapeo de respuestas.
+- Remaining verification: migración contra PostgreSQL y envío real con el PFX/TestSetId de David, que no se guardan en el repositorio.
+- Next owner: `qa_gate`.

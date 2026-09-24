@@ -20,11 +20,11 @@ CREATE INDEX idx_fiscal_docs_source ON fiscal_documents (source_document_id)
   WHERE source_document_id IS NOT NULL;
 
 -- Permissions for credit/debit notes
-INSERT INTO permissions (name, description) VALUES
-  ('credit_notes.create', 'Create credit notes'),
-  ('credit_notes.issue',  'Issue credit notes'),
-  ('debit_notes.create',  'Create debit notes'),
-  ('debit_notes.issue',   'Issue debit notes')
+INSERT INTO permissions (name, description, module) VALUES
+  ('credit_notes.create', 'Create credit notes', 'documents'),
+  ('credit_notes.issue',  'Issue credit notes', 'documents'),
+  ('debit_notes.create',  'Create debit notes', 'documents'),
+  ('debit_notes.issue',   'Issue debit notes', 'documents')
 ON CONFLICT (name) DO NOTHING;
 
 -- Seed role permissions

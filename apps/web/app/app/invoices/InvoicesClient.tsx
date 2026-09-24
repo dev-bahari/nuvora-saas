@@ -9,6 +9,8 @@ import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { Dialog } from '../../../components/ui/Dialog';
 import { useToast } from '../../../components/ui/ToastProvider';
 
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
+
 export interface InvoiceListItem {
   id: string;
   documentType: string;
@@ -94,7 +96,6 @@ export function InvoicesClient({ initialData, total, nextCursor, activeStatus, c
     taxTreatment: 'TAXED',
     taxRate: '19',
   });
-  const createBtnRef = useRef<HTMLButtonElement>(null);
 
   const filtered = initialData.filter((inv) => {
     if (search) {
@@ -155,6 +156,13 @@ export function InvoicesClient({ initialData, total, nextCursor, activeStatus, c
     if (!res.ok) {
       const err = await res.json().catch(() => ({})) as { message?: string };
       throw new Error(err.message ?? 'No se pudo completar la acción');
+    }
+    if (type === 'emit') {
+      const dian = await fetch(`${API_URL}/settings/dian/submissions`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ documentId: invoiceId }) });
+      if (!dian.ok && dian.status !== 403) {
+        const error = await dian.json().catch(() => ({})) as { message?: string };
+        throw new Error(`La factura quedó numerada, pero DIAN no recibió el set: ${error.message ?? 'reintenta el envío'}`);
+      }
     }
     toast.success(type === 'emit' ? 'Factura emitida' : 'Factura anulada');
     router.refresh();

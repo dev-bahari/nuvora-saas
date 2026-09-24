@@ -8,11 +8,15 @@ const connectionString =
   process.env['DATABASE_URL'] ??
   'postgresql://nuvora_app:nuvora_local_dev_password@localhost:54321/nuvora_dev';
 
-export async function runMigrations(dir = path.join(process.cwd(), 'db/migrations')): Promise<string[]> {
-  const pool = new Pool({ connectionString });
+export async function runMigrations(poolOrDir?: pg.Pool | string): Promise<string[]> {
+  const externalPool = typeof poolOrDir === 'object' ? poolOrDir : undefined;
+  const dir = typeof poolOrDir === 'string' ? poolOrDir : path.join(process.cwd(), 'db/migrations');
+  const pool = externalPool ?? new Pool({ connectionString });
   const client = await pool.connect();
 
   try {
+    // Serialize test workers and deploy replicas applying the same migration set.
+    await client.query(`SELECT pg_advisory_lock(hashtext('nuvora:migrations'))`);
     // Create migrations tracking table if not exists
     await client.query(`
       CREATE TABLE IF NOT EXISTS _schema_migrations (
@@ -53,8 +57,9 @@ export async function runMigrations(dir = path.join(process.cwd(), 'db/migration
 
     return applied;
   } finally {
+    await client.query(`SELECT pg_advisory_unlock(hashtext('nuvora:migrations'))`).catch(() => undefined);
     client.release();
-    await pool.end();
+    if (!externalPool) await pool.end();
   }
 }
 

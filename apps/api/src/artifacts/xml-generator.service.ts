@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { DraftDocument, DraftLine, DraftTaxSummary } from '@nuvora/contracts';
 import { CufeService } from './cufe.service.js';
+import { Decimal } from 'decimal.js';
 
 export interface TenantInfo {
   legalName: string;
@@ -288,7 +289,7 @@ function dueDate(doc: DraftDocument): string {
 function sumTax(taxes: readonly DraftTaxSummary[], treatments: string[]): string {
   const total = taxes
     .filter((t) => treatments.includes(t.taxTreatment))
-    .reduce((acc, t) => acc + parseFloat(t.taxAmount), 0);
+    .reduce((acc, t) => acc.plus(t.taxAmount), new Decimal(0));
   return total.toFixed(2);
 }
 
@@ -298,7 +299,7 @@ function taxTotals(taxes: readonly DraftTaxSummary[], currency: string): string 
   // Group by taxRate for TAXED treatments
   const byRate = new Map<number, DraftTaxSummary[]>();
   for (const t of taxes) {
-    if (t.taxTreatment === 'TAXED' && parseFloat(t.taxAmount) > 0) {
+    if (t.taxTreatment === 'TAXED' && new Decimal(t.taxAmount).greaterThan(0)) {
       const bucket = byRate.get(t.taxRate) ?? [];
       bucket.push(t);
       byRate.set(t.taxRate, bucket);
@@ -307,11 +308,11 @@ function taxTotals(taxes: readonly DraftTaxSummary[], currency: string): string 
   if (byRate.size === 0) return '';
 
   const totalTax = [...byRate.values()].flat()
-    .reduce((a, t) => a + parseFloat(t.taxAmount), 0).toFixed(2);
+    .reduce((a, t) => a.plus(t.taxAmount), new Decimal(0)).toFixed(2);
 
   const subtotals = [...byRate.entries()].map(([rate, items]) => {
-    const taxable = items.reduce((a, t) => a + parseFloat(t.taxableBase), 0).toFixed(2);
-    const taxAmt = items.reduce((a, t) => a + parseFloat(t.taxAmount), 0).toFixed(2);
+    const taxable = items.reduce((a, t) => a.plus(t.taxableBase), new Decimal(0)).toFixed(2);
+    const taxAmt = items.reduce((a, t) => a.plus(t.taxAmount), new Decimal(0)).toFixed(2);
     return `    <cac:TaxSubtotal>
       <cbc:TaxableAmount currencyID="${currency}">${taxable}</cbc:TaxableAmount>
       <cbc:TaxAmount currencyID="${currency}">${taxAmt}</cbc:TaxAmount>
@@ -333,7 +334,7 @@ ${subtotals}
 
 function invoiceLines(lines: readonly DraftLine[], currency: string): string {
   return lines.map((l, i) => {
-    const hasTax = l.taxTreatment === 'TAXED' && parseFloat(l.taxAmount) > 0;
+    const hasTax = l.taxTreatment === 'TAXED' && new Decimal(l.taxAmount).greaterThan(0);
     const lineTaxBlock = hasTax ? `
     <cac:TaxTotal>
       <cbc:TaxAmount currencyID="${currency}">${l.taxAmount}</cbc:TaxAmount>
@@ -352,7 +353,7 @@ function invoiceLines(lines: readonly DraftLine[], currency: string): string {
 
     return `  <cac:InvoiceLine>
     <cbc:ID>${i + 1}</cbc:ID>
-    <cbc:InvoicedQuantity unitCode="94">${parseFloat(l.quantity).toFixed(6)}</cbc:InvoicedQuantity>
+    <cbc:InvoicedQuantity unitCode="94">${new Decimal(l.quantity).toFixed(6)}</cbc:InvoicedQuantity>
     <cbc:LineExtensionAmount currencyID="${currency}">${l.lineTotal}</cbc:LineExtensionAmount>
     <cbc:FreeOfChargeIndicator>false</cbc:FreeOfChargeIndicator>
     <cac:AllowanceCharge>

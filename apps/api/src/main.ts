@@ -13,6 +13,9 @@ const REDACTED_PATHS = [
   'req.body.token',
   'req.body.dianSoftwarePin',
   'req.body.dianTechnicalKey',
+  'req.body.password',
+  'req.body.pfxBase64',
+  'req.body.caChainBase64',
 ];
 
 async function bootstrap() {

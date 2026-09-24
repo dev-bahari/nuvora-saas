@@ -26,6 +26,6 @@ CREATE POLICY tenant_settings_isolation ON tenant_settings
 
 GRANT SELECT, INSERT, UPDATE ON tenant_settings TO nuvora_app;
 
-INSERT INTO permissions (name, description) VALUES
-  ('tenant.settings', 'Manage tenant company settings')
+INSERT INTO permissions (name, description, module) VALUES
+  ('tenant.settings', 'Manage tenant company settings', 'settings')
 ON CONFLICT (name) DO NOTHING;

@@ -75,7 +75,7 @@ CREATE INDEX ON journal_entries (tenant_id, entry_date);
 
 -- ─── Permissions ──────────────────────────────────────────────────────────────
 
-INSERT INTO permissions (name, description) VALUES
-  ('accounting.read',  'Ver asientos contables del tenant'),
-  ('accounting.write', 'Crear asientos contables (sólo sistema)')
+INSERT INTO permissions (name, description, module) VALUES
+  ('accounting.read',  'Ver asientos contables del tenant', 'accounting'),
+  ('accounting.write', 'Crear asientos contables (sólo sistema)', 'accounting')
 ON CONFLICT (name) DO NOTHING;

@@ -57,7 +57,7 @@ CREATE INDEX ON notification_log (tenant_id, document_id);
 CREATE INDEX ON notification_log (tenant_id, sent_at DESC);
 
 -- Permissions
-INSERT INTO permissions (name, description) VALUES
-  ('notifications.manage', 'Gestionar canales de notificación'),
-  ('notifications.read',   'Ver historial de notificaciones')
+INSERT INTO permissions (name, description, module) VALUES
+  ('notifications.manage', 'Gestionar canales de notificación', 'notifications'),
+  ('notifications.read',   'Ver historial de notificaciones', 'notifications')
 ON CONFLICT (name) DO NOTHING;

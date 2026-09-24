@@ -9,12 +9,13 @@ import { AccountingModule } from './accounting/accounting.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
 import { SettingsModule } from './settings/settings.module.js';
+import { DianModule } from './dian/dian.module.js';
 
 @Module({
   imports: [
     HealthModule, AuthModule, CustomersModule, ProductsModule,
     DocumentsModule, ArtifactsModule, AccountingModule, NotificationsModule,
-    MetricsModule, SettingsModule,
+    MetricsModule, SettingsModule, DianModule,
   ],
   controllers: [],
   providers: [],

@@ -115,9 +115,9 @@
   --ui-surface: #0f172a;
   --ui-muted: #cbd5e1;
   --ui-border-strong: #64748b;
-  --ui-primary: #93c5fd;
-  --ui-primary-hover: #bfdbfe;
-  --ui-on-primary: #0f172a;
+  --ui-primary: #2563eb;
+  --ui-primary-hover: #1d4ed8;
+  --ui-on-primary: #ffffff;
   --ui-focus: #93c5fd;
   --ui-selected: #172554;
   --ui-hover: #1e293b;

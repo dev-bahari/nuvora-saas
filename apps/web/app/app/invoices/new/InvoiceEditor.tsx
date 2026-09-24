@@ -41,13 +41,6 @@ const newLine = (): LineForm => ({
 
 const EMPTY_AIU: AIUForm = { base: '', administracionPct: '4', imprevistosPct: '3', utilidadPct: '10', ivaOnUtilidadPct: '19' };
 
-const TAX_TREATMENTS = [
-  { value: 'TAXED', label: 'Gravado IVA' },
-  { value: 'EXEMPT', label: 'Exento' },
-  { value: 'EXCLUDED', label: 'Excluido' },
-  { value: 'NON_TAXED', label: 'No gravado' },
-];
-
 function fmt(n: string | number | null | undefined): string {
   if (n == null || n === '') return '—';
   const num = typeof n === 'string' ? parseFloat(n) : n;
@@ -362,7 +355,7 @@ export function InvoiceEditor({ customers, taxes }: { customers: Customer[]; tax
                       value={`${line.taxTreatment}:${line.taxRate}`}
                       onChange={e => {
                         const [treatment, code] = e.target.value.split(':');
-                        autoFillTax(line.id, treatment, code);
+                        if (treatment && code) autoFillTax(line.id, treatment, code);
                       }}
                     >
                       {taxes.map(t => (

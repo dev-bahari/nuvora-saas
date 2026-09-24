@@ -57,6 +57,6 @@ ALTER TABLE fiscal_documents
   ADD COLUMN IF NOT EXISTS document_number BIGINT;
 
 -- Permisos requeridos para esta tarea
-INSERT INTO permissions (name, description) VALUES
-  ('numbering.manage', 'Manage document numbering sequences')
+INSERT INTO permissions (name, description, module) VALUES
+  ('numbering.manage', 'Manage document numbering sequences', 'numbering')
 ON CONFLICT (name) DO NOTHING;
