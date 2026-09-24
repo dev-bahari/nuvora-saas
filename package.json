@@ -11,7 +11,7 @@
   "scripts": {
     "lint": "eslint . && pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",
-    "test": "pnpm -r --if-present run test && vitest run tests/architecture tests/unit tests/security",
+    "test": "pnpm --filter @nuvora/contracts build && pnpm --filter @nuvora/calculation-engine build && pnpm -r --if-present run test && vitest run tests/architecture tests/unit tests/security",
     "test:integration": "vitest run tests/integration",
     "test:unit": "vitest run tests/unit",
     "test:e2e": "pnpm -r --if-present run test:e2e",
