@@ -43,7 +43,14 @@ export class PermissionGuard implements CanActivate {
       throw new ForbiddenException('Tenant context not established on request');
     }
 
-    // Resolve live effective permissions from active membership if permissions service is available
+    // SessionGuard resolves effective permissions from the active membership on every request.
+    // Prefer that request-bound value: PermissionsService may not have a pool when Nest creates
+    // the global guard, whereas the session guard always supplies one.
+    if (ctx.permissions.includes(requiredPermission)) {
+      return true;
+    }
+
+    // Retain a database lookup for callers that establish a tenant context without SessionGuard.
     if (this.permissionsService) {
       const effective = await this.permissionsService.getEffectivePermissions(
         ctx.tenantId,
