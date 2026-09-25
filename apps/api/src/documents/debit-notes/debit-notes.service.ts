@@ -4,6 +4,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
   BadRequestException,
+  Optional,
 } from '@nestjs/common';
 import pg from 'pg';
 import { withTenant } from '../../tenancy/tenant-transaction.js';
@@ -46,7 +47,7 @@ export class DebitNotesService {
   constructor(
     private readonly numbering: NumberingService,
     private readonly audit: AuditService,
-    customPool?: pg.Pool,
+    @Optional() customPool?: pg.Pool,
   ) {
     this.pool =
       customPool ??

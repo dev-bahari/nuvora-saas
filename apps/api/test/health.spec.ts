@@ -196,7 +196,61 @@ describe('Artifacts composition and document contract', () => {
          const moduleFixture = await Test.createTestingModule({ imports: [ArtifactsModule] }).compile();
          await moduleFixture.close();`,
       ],
-      { cwd: process.cwd(), stdio: 'pipe' },
+      { cwd: `${process.cwd()}/apps/api`, stdio: 'pipe' },
+    );
+  });
+
+  it('resolves AuthService from production-compiled metadata', () => {
+    execFileSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `import 'reflect-metadata';
+         import { Test } from '@nestjs/testing';
+         import { AuthModule } from './dist/auth/auth.module.js';
+         const moduleFixture = await Test.createTestingModule({ imports: [AuthModule] }).compile();
+         await moduleFixture.close();`,
+      ],
+      { cwd: `${process.cwd()}/apps/api`, stdio: 'pipe' },
+    );
+  });
+
+  it('resolves OnboardingService from production-compiled metadata', () => {
+    execFileSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `import 'reflect-metadata';
+         import { Test } from '@nestjs/testing';
+         import { AuthModule } from './dist/auth/auth.module.js';
+         import { AuthService } from './dist/auth/auth.service.js';
+         const moduleFixture = await Test.createTestingModule({ imports: [AuthModule] })
+           .overrideProvider(AuthService).useValue({}).compile();
+         await moduleFixture.close();`,
+      ],
+      { cwd: `${process.cwd()}/apps/api`, stdio: 'pipe' },
+    );
+  });
+
+  it('resolves the production AppModule when DIAN encryption is configured', () => {
+    execFileSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `import 'reflect-metadata';
+         import { Test } from '@nestjs/testing';
+         import { AppModule } from './dist/app.module.js';
+         const moduleFixture = await Test.createTestingModule({ imports: [AppModule] }).compile();
+         await moduleFixture.close();`,
+      ],
+      {
+        cwd: `${process.cwd()}/apps/api`,
+        stdio: 'pipe',
+        env: { ...process.env, DIAN_SECRETS_KEY: 'a'.repeat(64) },
+      },
     );
   });
 });

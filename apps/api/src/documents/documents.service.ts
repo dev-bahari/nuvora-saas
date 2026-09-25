@@ -15,6 +15,7 @@ import {
   BadRequestException,
   ConflictException,
   UnprocessableEntityException,
+  Optional,
 } from '@nestjs/common';
 import pg from 'pg';
 import { withTenant } from '../tenancy/tenant-transaction.js';
@@ -246,7 +247,7 @@ function decodeCursor(cursor: string): { id: string; createdAt: string } | null 
 export class DocumentsService {
   private pool: pg.Pool;
 
-  constructor(customPool?: pg.Pool) {
+  constructor(@Optional() customPool?: pg.Pool) {
     this.pool =
       customPool ??
       new pg.Pool({

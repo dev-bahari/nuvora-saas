@@ -43,7 +43,7 @@ const X = escapeXml;
  */
 @Injectable()
 export class XmlGeneratorService {
-  constructor(private readonly cufe = new CufeService()) {}
+  constructor(private readonly cufe: CufeService) {}
 
   generate(doc: DraftDocument, tenant?: TenantInfo): Buffer {
     const env = tenant?.dianEnvironment ?? 'HABILITACION';

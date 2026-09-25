@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import pg from 'pg';
 import { withTenant } from '../tenancy/tenant-transaction.js';
 import type { RequestContext } from '../tenancy/tenant-context.js';
@@ -39,7 +39,7 @@ type DbLine = {
  */
 @Injectable()
 export class AccountingService {
-  constructor(private readonly customPool?: pg.Pool) {}
+  constructor(@Optional() private readonly customPool?: pg.Pool) {}
 
   async recordIssuance(ctx: RequestContext, doc: DraftDocument): Promise<JournalEntry> {
     return withTenant(this.customPool ?? new pg.Pool(), ctx, async (tx) => {

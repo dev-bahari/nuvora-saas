@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import pg from 'pg';
 import { z } from 'zod';
 import { withTenant } from '../tenancy/tenant-transaction.js';
@@ -123,7 +123,7 @@ function decodeCursor(cursor: string): { id: string; createdAt: string } | null 
 export class CustomersService {
   private pool: pg.Pool;
 
-  constructor(customPool?: pg.Pool) {
+  constructor(@Optional() customPool?: pg.Pool) {
     this.pool = customPool ?? new pg.Pool({
       connectionString:
         process.env['DATABASE_URL'] ??

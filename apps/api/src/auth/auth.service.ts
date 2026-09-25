@@ -25,8 +25,8 @@ export interface SessionInfo {
 export class AuthService {
   private pool: pg.Pool;
 
-  constructor(customPool?: pg.Pool) {
-    this.pool = customPool ?? new Pool({
+  constructor() {
+    this.pool = new Pool({
       connectionString:
         process.env['DATABASE_URL'] ??
         'postgresql://nuvora_app:nuvora_local_dev_password@localhost:54321/nuvora_dev',

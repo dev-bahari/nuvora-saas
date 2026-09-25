@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import pg from 'pg';
 import { withTenant } from '../tenancy/tenant-transaction.js';
 import type { RequestContext } from '../tenancy/tenant-context.js';
@@ -23,7 +23,7 @@ export interface DashboardMetrics {
 export class MetricsService {
   private pool: pg.Pool;
 
-  constructor(customPool?: pg.Pool) {
+  constructor(@Optional() customPool?: pg.Pool) {
     this.pool =
       customPool ??
       new pg.Pool({

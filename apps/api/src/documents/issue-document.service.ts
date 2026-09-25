@@ -32,7 +32,7 @@ export class IssueDocumentService {
     private readonly audit: AuditService,
     private readonly dian: MockDianProvider,
     // ponytail: optional customPool for test injection; production uses env var
-    customPool?: pg.Pool,
+    @Optional() customPool?: pg.Pool,
     @Optional() private readonly accounting?: AccountingService,
     @Optional() private readonly notifications?: NotificationsService,
   ) {

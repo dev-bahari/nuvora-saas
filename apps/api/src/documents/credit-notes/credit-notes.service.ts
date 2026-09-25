@@ -42,20 +42,17 @@ export class CreditNotesService {
   constructor(
     private readonly numbering: NumberingService,
     private readonly audit: AuditService,
-    dianOrPool: MockDianProvider | pg.Pool,
-    customPool?: pg.Pool,
+    private readonly dian: MockDianProvider,
+    @Optional() customPool?: pg.Pool,
     @Optional() private readonly accounting?: AccountingService,
   ) {
-    this.dian = dianOrPool instanceof pg.Pool ? new MockDianProvider() : dianOrPool;
     this.pool =
-      (dianOrPool instanceof pg.Pool ? dianOrPool : customPool) ??
+      customPool ??
       new pg.Pool({
         connectionString:
           process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5432/nuvora',
       });
   }
-
-  private readonly dian: MockDianProvider;
 
   /**
    * Creates and immediately issues a credit note against an ISSUED invoice.

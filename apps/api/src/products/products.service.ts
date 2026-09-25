@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import pg from 'pg';
 import { z } from 'zod';
 import { positiveMoneySchema } from '@nuvora/contracts';
@@ -109,7 +109,7 @@ function decodeCursor(cursor: string): { id: string; createdAt: string } | null 
 export class ProductsService {
   private pool: pg.Pool;
 
-  constructor(customPool?: pg.Pool) {
+  constructor(@Optional() customPool?: pg.Pool) {
     this.pool = customPool ?? new pg.Pool({
       connectionString:
         process.env['DATABASE_URL'] ??

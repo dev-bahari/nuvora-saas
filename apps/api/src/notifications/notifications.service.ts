@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import https from 'node:https';
 import http from 'node:http';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import pg from 'pg';
 import { withTenant } from '../tenancy/tenant-transaction.js';
 import type { RequestContext } from '../tenancy/tenant-context.js';
@@ -39,7 +39,7 @@ type DbChannel = {
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private readonly customPool?: pg.Pool) {}
+  constructor(@Optional() private readonly customPool?: pg.Pool) {}
 
   private pool(): pg.Pool {
     return this.customPool ?? new pg.Pool();

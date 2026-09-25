@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import pg from 'pg';
 import { withTenant } from '../tenancy/tenant-transaction.js';
 import type { RequestContext } from '../tenancy/tenant-context.js';
@@ -11,7 +11,7 @@ interface StoredSecret { pfx: string; password: string; caChain: string; softwar
 @Injectable()
 export class DianCredentialsService {
   private readonly pool: pg.Pool;
-  constructor(private readonly secrets: DianSecretService, private readonly loader: PfxChainLoaderService, customPool?: pg.Pool) {
+  constructor(private readonly secrets: DianSecretService, private readonly loader: PfxChainLoaderService, @Optional() customPool?: pg.Pool) {
     this.pool = customPool ?? new pg.Pool({ connectionString: process.env['DATABASE_URL'] ?? 'postgresql://postgres:postgres@localhost:5432/nuvora' });
   }
 
