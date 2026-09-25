@@ -5,6 +5,7 @@ import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyMultipart from '@fastify/multipart';
 import type { FastifyInstance } from 'fastify';
 import { AppModule } from './app.module.js';
+import { configureCors } from './http/cors-config.js';
 
 const REDACTED_PATHS = [
   'req.headers.authorization',
@@ -34,6 +35,8 @@ async function bootstrap() {
 
   // Cast needed: NestJS uses a custom FastifyTypeProvider; plugins expect the default one
   const fastify = app.getHttpAdapter().getInstance() as unknown as FastifyInstance;
+
+  configureCors(fastify);
 
   await fastify.register(helmet, {
     contentSecurityPolicy: {
