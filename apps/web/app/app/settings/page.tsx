@@ -5,6 +5,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/ToastProvider';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { dianReadiness } from './dian-status.js';
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
@@ -145,6 +146,14 @@ export default function SettingsPage() {
 
   if (loading) return <main className="page-content text-neutral-400">Cargando…</main>;
 
+  const readiness = dianReadiness(dianStatus);
+  const readinessStyle = {
+    success: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+    warning: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    danger: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    neutral: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  }[readiness.tone];
+
   return (
     <main className="page-content">
       <PageHeader title="Configuración" />
@@ -181,12 +190,18 @@ export default function SettingsPage() {
 
         {/* DIAN card */}
         <section className="border rounded-xl p-5 space-y-3 bg-white dark:bg-slate-900">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-sm uppercase tracking-wide ui-muted">DIAN</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="font-semibold text-sm uppercase tracking-wide ui-muted">DIAN</h2>
+              <div role="status" className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${readinessStyle}`}>
+                {readiness.label}
+              </div>
+            </div>
             <button type="button" className="ui-button-secondary text-sm" onClick={openDian}>
               Editar
             </button>
           </div>
+          <p className="text-sm ui-muted">{readiness.detail}</p>
           <dl className="space-y-2">
             <InfoRow label="Ambiente" value={form.dianEnvironment === 'PRODUCCION' ? 'Producción' : 'Habilitación (pruebas)'} />
             <InfoRow label="Software ID" value={form.dianSoftwareId ? '••••••••' : '—'} />
