@@ -10,6 +10,8 @@ import { DianPackageService } from '../src/dian/direct/dian-package.service.js';
 import { DianResponseParser } from '../src/dian/direct/dian-response-parser.js';
 import { DianSoapClient } from '../src/dian/direct/dian-soap-client.js';
 import { DianSecretService } from '../src/dian/secrets/dian-secret.service.js';
+import { DianController } from '../src/dian/dian.controller.js';
+import { DianSubmissionController } from '../src/documents/dian-submission.controller.js';
 import type { DraftDocument } from '@nuvora/contracts';
 
 function certificate(
@@ -161,6 +163,17 @@ describe('DIAN cryptography and transport', () => {
     expect(result.outcome).toBe('PENDING');
   });
 
+  it('records a transport timeout as pending so it can be reconciled without a resend', async () => {
+    const client = new DianSoapClient(async () => {
+      throw new DOMException('timeout', 'AbortError');
+    });
+
+    await expect(client.sendTestSetAsync({ zipBase64: 'UEs=', testSetId: 'set-1' })).resolves.toMatchObject({
+      outcome: 'PENDING',
+      message: expect.stringMatching(/timeout/i),
+    });
+  });
+
   it('signs SOAP with WS-Addressing and builds GetStatusZip polling', async () => {
     const fixture = pkiFixture(); const credentials = new PfxChainLoaderService().load(fixture.pfx, fixture.password, fixture.chain);
     const requests: string[] = [];
@@ -169,5 +182,36 @@ describe('DIAN cryptography and transport', () => {
     await client.getStatusZip({ trackId: 'track-1', credentials });
     expect(requests[0]).toContain('<a:Action'); expect(requests[0]).toContain('<a:To'); expect(requests[0]).toContain('BinarySecurityToken');
     expect(requests[1]).toContain('<wcf:GetStatusZip>'); expect(requests[1]).toContain('<wcf:trackId>track-1</wcf:trackId>');
+  });
+});
+
+describe('DIAN pilot configuration boundary', () => {
+  const pilotContext = {
+    tenantId: 'pilot-tenant', userId: 'user-1', requestId: 'request-1', permissions: ['dian.configure'],
+  };
+
+  it('rejects credential reads and writes outside the configured pilot tenant', async () => {
+    const previous = process.env['DIAN_PILOT_TENANT_ID'];
+    process.env['DIAN_PILOT_TENANT_ID'] = 'pilot-tenant';
+    const credentials = {
+      getStatus: async () => ({ configured: false }),
+      save: async () => ({ configured: true }),
+    };
+    const controller = new DianController(credentials as never);
+    const request = { context: { ...pilotContext, tenantId: 'another-tenant' } } as never;
+
+    expect(() => controller.get(request)).toThrow(/tenant piloto/i);
+    await expect(controller.save(request, {} as never)).rejects.toThrow(/tenant piloto/i);
+    process.env['DIAN_PILOT_TENANT_ID'] = previous;
+  });
+
+  it('rejects DIAN submission progress outside the configured pilot tenant', () => {
+    const previous = process.env['DIAN_PILOT_TENANT_ID'];
+    process.env['DIAN_PILOT_TENANT_ID'] = 'pilot-tenant';
+    const controller = new DianSubmissionController({ enqueue: async () => ({}), progress: async () => ({}) } as never);
+    const request = { context: { ...pilotContext, tenantId: 'another-tenant' } } as never;
+
+    expect(() => controller.progress(request)).toThrow(/tenant piloto/i);
+    process.env['DIAN_PILOT_TENANT_ID'] = previous;
   });
 });

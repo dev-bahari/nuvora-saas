@@ -10,7 +10,15 @@ import { PfxChainLoaderService } from '../dian/signing/pfx-chain-loader.service.
 import { SettingsService } from '../settings/settings.service.js';
 import { DocumentsService } from './documents.service.js';
 
-interface SubmissionJob { tenantId: string; userId: string; requestId: string; documentId: string; }
+interface SubmissionJob {
+  schemaVersion: 1;
+  tenantId: string;
+  userId: string;
+  requestId: string;
+  entityId: string;
+  idempotencyKey: string;
+  payload: { documentId: string };
+}
 const SUBMIT_QUEUE = 'dian-habilitation-submit';
 const POLL_QUEUE = 'dian-habilitation-poll';
 
@@ -36,7 +44,16 @@ export class DianSubmissionQueueService implements OnModuleInit, OnApplicationSh
       return rows[0]!;
     });
     if (['SUBMITTING','PENDING','ACCEPTED','REJECTED'].includes(existing.status)) return existing;
-    const jobId = await this.boss!.send(SUBMIT_QUEUE, { tenantId: ctx.tenantId, userId: ctx.userId, requestId: ctx.requestId, documentId }, { singletonKey: `${ctx.tenantId}:${documentId}` });
+    const job: SubmissionJob = {
+      schemaVersion: 1,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      requestId: ctx.requestId,
+      entityId: documentId,
+      idempotencyKey: `dian.submit:${ctx.tenantId}:${documentId}`,
+      payload: { documentId },
+    };
+    const jobId = await this.boss!.send(SUBMIT_QUEUE, job, { singletonKey: job.idempotencyKey });
     await withTenant(this.pool, ctx, (tx) => tx.query(`UPDATE dian_submissions SET pg_boss_job_id=$1, status='QUEUED', updated_at=NOW() WHERE tenant_id=$2 AND document_id=$3`, [jobId, ctx.tenantId, documentId]));
     return { ...existing, status: 'QUEUED', jobId };
   }
@@ -65,25 +82,26 @@ export class DianSubmissionQueueService implements OnModuleInit, OnApplicationSh
 
   private context(data: SubmissionJob): RequestContext { return { tenantId: data.tenantId, userId: data.userId, requestId: data.requestId, permissions: [] }; }
   private async submit(job: Job<SubmissionJob>) {
-    const ctx = this.context(job.data); await this.markAttempt(ctx, job.data.documentId, 'SUBMITTING');
+    const ctx = this.context(job.data); const documentId = job.data.payload.documentId; await this.markAttempt(ctx, documentId, 'SUBMITTING');
     try {
-      const [document, tenant, secret] = await Promise.all([this.documents.getDraft(ctx, job.data.documentId), this.settings.get(ctx), this.credentials.load(ctx)]);
+      const [document, tenant, secret] = await Promise.all([this.documents.getDraft(ctx, documentId), this.settings.get(ctx), this.credentials.load(ctx)]);
       const sourceDoc = document.sourceDocumentId ? await this.documents.getDraft(ctx, document.sourceDocumentId) : undefined;
       const source = sourceDoc ? { number: `${sourceDoc.numberPrefix ?? ''}${sourceDoc.documentNumber ?? ''}`, uuid: sourceDoc.cude ?? sourceDoc.cufe ?? '', issueDate: sourceDoc.issueDate } : undefined;
       const result = await this.direct.submit({ document, tenant: { ...tenant, dianSoftwarePin: secret.softwarePin, dianTechnicalKey: secret.technicalKey, invoiceAuthorization: secret.invoiceAuthorization, authorizationPrefix: secret.authorizationPrefix, authorizationFrom: secret.authorizationFrom, authorizationTo: secret.authorizationTo, authorizationStartDate: secret.authorizationStartDate, authorizationEndDate: secret.authorizationEndDate }, pfx: Buffer.from(secret.pfx, 'base64'), password: secret.password, caChain: Buffer.from(secret.caChain, 'base64'), testSetId: secret.testSetId, ...(source ? { source } : {}) });
       await this.persistResult(ctx, document.id, result.response, result.signedXml, result.zip);
       if (result.response.outcome === 'ERROR') throw new Error(result.response.message);
-      if (result.response.outcome === 'PENDING' && result.response.trackId) await this.boss!.send(POLL_QUEUE, job.data, { singletonKey: `${ctx.tenantId}:${document.id}`, startAfter: 30 });
-    } catch (error) { await this.recordError(ctx, job.data.documentId, error); throw error; }
+      if (result.response.outcome === 'PENDING' && result.response.trackId) await this.boss!.send(POLL_QUEUE, job.data, { singletonKey: job.data.idempotencyKey, startAfter: 30 });
+    } catch (error) { await this.recordError(ctx, documentId, error); throw error; }
   }
 
   private async poll(job: Job<SubmissionJob>) {
     const ctx = this.context(job.data); const secret = await this.credentials.load(ctx);
     const credentials = new PfxChainLoaderService().load(Buffer.from(secret.pfx, 'base64'), secret.password, Buffer.from(secret.caChain, 'base64'));
-    const tracking = await withTenant(this.pool, ctx, async (tx) => (await tx.query<{tracking_id:string}>(`SELECT tracking_id FROM dian_submissions WHERE tenant_id=$1 AND document_id=$2`, [ctx.tenantId, job.data.documentId])).rows[0]?.tracking_id);
+    const documentId = job.data.payload.documentId;
+    const tracking = await withTenant(this.pool, ctx, async (tx) => (await tx.query<{tracking_id:string}>(`SELECT tracking_id FROM dian_submissions WHERE tenant_id=$1 AND document_id=$2`, [ctx.tenantId, documentId])).rows[0]?.tracking_id);
     if (!tracking) throw new Error('No existe trackingId DIAN para consultar');
-    const response = await this.direct.poll({ trackId: tracking, credentials }); await this.persistResult(ctx, job.data.documentId, response);
-    if (response.outcome === 'PENDING') { await this.boss!.send(POLL_QUEUE, job.data, { singletonKey: `${ctx.tenantId}:${job.data.documentId}`, startAfter: 30 }); return; }
+    const response = await this.direct.poll({ trackId: tracking, credentials }); await this.persistResult(ctx, documentId, response);
+    if (response.outcome === 'PENDING') { await this.boss!.send(POLL_QUEUE, job.data, { singletonKey: job.data.idempotencyKey, startAfter: 30 }); return; }
     if (response.outcome === 'ERROR') throw new Error(response.message);
   }
 

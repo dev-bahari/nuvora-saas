@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import helmet from '@fastify/helmet';
 import fastifyRateLimit from '@fastify/rate-limit';
+import fastifyMultipart from '@fastify/multipart';
 import type { FastifyInstance } from 'fastify';
 import { AppModule } from './app.module.js';
 
@@ -65,6 +66,10 @@ async function bootstrap() {
       error: 'Too Many Requests',
       message: 'Rate limit exceeded — try again later',
     }),
+  });
+
+  await fastify.register(fastifyMultipart, {
+    limits: { files: 2, fileSize: 1_048_576, fields: 16 },
   });
 
   const port = process.env['PORT'] ? parseInt(process.env['PORT'], 10) : 3001;

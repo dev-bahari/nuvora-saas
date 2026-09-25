@@ -23,6 +23,11 @@ export class DianSoapClient {
       const response = await this.request(ENDPOINT, { method: 'POST', headers: { 'content-type': `application/soap+xml;charset=UTF-8;action="${action}"` }, body, signal: controller.signal });
       const xml = await response.text(); const parsed = this.parser.parse(xml);
       return !response.ok && parsed.outcome !== 'ERROR' ? { ...parsed, outcome: 'ERROR', message: `DIAN HTTP ${response.status}: ${parsed.message}` } : parsed;
+    } catch (error) {
+      if (controller.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+        return { outcome: 'PENDING', message: 'Timeout de transporte; se conciliará el estado con DIAN antes de reenviar', errors: [], raw: '' };
+      }
+      throw error;
     } finally { clearTimeout(timeout); }
   }
 }

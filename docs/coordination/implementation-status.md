@@ -8,6 +8,24 @@
 - Integration gate: pending
 - QA gate: READY_FOR_REINSPECTION
 
+### 2026-09-24 — Solicitud de QA: piloto de habilitación DIAN
+
+- Owner: `qa_gate` (revisión independiente); primary coordina, sin cambios de producto durante la revisión.
+- Scope: rama `codex/dian-habilitation-pilot`, contrato `dian-direct-v1`.
+- Intended paths: revisión de `apps/api/src/dian/`, migraciones/worker DIAN, UI de configuración DIAN, pruebas y documentación; solo lectura.
+- Dependencies: `DIAN_PILOT_TENANT_ID`, `DIAN_SECRETS_KEY`, PostgreSQL de prueba y, para la evidencia externa final, PFX/TestSetId reales. Ninguna credencial se registra en Git.
+- Evidence requested: lint, typecheck, build, pruebas DIAN, RLS de dos tenants, migración limpia, idempotencia/reintentos y acuerdo API/UI.
+- Status: active.
+- Next owner: primary para atender el veredicto y preparar la carga segura de credenciales únicamente si el gate lo permite.
+
+### 2026-09-24 — Veredicto QA: piloto de habilitación DIAN
+
+- Verdict: **REJECTED**.
+- Fresh evidence: `apps/api/test/dian-core.spec.ts` 17/17 PASS; ESLint acotado PASS; typecheck de API FAIL (11 errores, incluidos contratos `DraftDocument.cufe` y `documentNumber`); integración DIAN no ejecutable porque PostgreSQL local `localhost:54321` rechaza conexión; no existe objetivo E2E DIAN.
+- Blockers: las rutas `GET`/`PUT` de configuración no aplican el gate `DIAN_PILOT_TENANT_ID`; timeout SOAP propaga error en vez de pasar a `PENDING` y conciliación; envío DIAN síncrono dentro de transacción fiscal y payload outbox sin envolvente versionada; contrato real JSON/base64 no coincide con multipart pactado; faltan UI/ruta, runbook y E2E del operador.
+- Acceptance: corregir los hallazgos con pruebas de contrato API/UI, migración limpia, RLS de dos tenants con rol restringido, idempotencia/reintento/recuperación, E2E y ejecución completa de lint/typecheck/test/integration/build; después obtener evidencia real DIAN.
+- Next owner: backend_domain, platform_architect y frontend_design, con primary como coordinador. No se aceptan credenciales reales hasta cerrar estos requisitos.
+
 ## Active ownership
 
 ### 2026-09-24 — DIAN habilitation pilot implementation

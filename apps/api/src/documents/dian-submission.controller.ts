@@ -11,8 +11,17 @@ type AuthRequest = FastifyRequest & { context: RequestContext };
 export class DianSubmissionController {
   constructor(private readonly queue: DianSubmissionQueueService) {}
   @Post() @RequirePermission('invoices.issue') submit(@Req() req: AuthRequest, @Body() body: { documentId: string }) {
-    if (req.context.tenantId !== process.env['DIAN_PILOT_TENANT_ID']) throw new ForbiddenException('El envío directo está restringido al tenant piloto');
+    this.requirePilot(req.context);
     return this.queue.enqueue(req.context, body.documentId);
   }
-  @Get() @RequirePermission('dian.configure') progress(@Req() req: AuthRequest) { return this.queue.progress(req.context); }
+  @Get() @RequirePermission('dian.configure') progress(@Req() req: AuthRequest) {
+    this.requirePilot(req.context);
+    return this.queue.progress(req.context);
+  }
+
+  private requirePilot(ctx: RequestContext) {
+    if (!process.env['DIAN_PILOT_TENANT_ID'] || ctx.tenantId !== process.env['DIAN_PILOT_TENANT_ID']) {
+      throw new ForbiddenException('El envío directo está restringido al tenant piloto');
+    }
+  }
 }

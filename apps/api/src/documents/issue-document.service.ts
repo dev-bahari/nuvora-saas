@@ -15,7 +15,6 @@ import { IdempotencyService } from '../common/idempotency/idempotency.service.js
 import type { DraftDocument } from '@nuvora/contracts';
 import type { AccountingService } from '../accounting/accounting.service.js';
 import type { NotificationsService } from '../notifications/notifications.service.js';
-import { CufeService } from '../artifacts/cufe.service.js';
 
 interface DocumentStatusRow {
   id: string;
@@ -27,8 +26,6 @@ interface DocumentStatusRow {
 export class IssueDocumentService {
   private readonly logger = new Logger(IssueDocumentService.name);
   private pool: pg.Pool;
-
-  private readonly cufe = new CufeService();
 
   constructor(
     private readonly numbering: NumberingService,
@@ -60,8 +57,6 @@ export class IssueDocumentService {
     documentId: string,
     idempotencyKey?: string,
   ): Promise<DraftDocument> {
-    let finalStatus: 'ISSUED' | 'REJECTED' = 'ISSUED';
-
     const issued = await withTenant(this.pool, ctx, async (tx) => {
       // Idempotency check
       if (idempotencyKey) {
@@ -91,62 +86,10 @@ export class IssueDocumentService {
       // Reserve number
       const reserved = await this.numbering.reserveNextNumber(tx, ctx.tenantId, 'INVOICE');
 
-      // Load financial data + tenant settings to compute CUFE
-      const { rows: [finRow] } = await tx.query<{
-        subtotal: string; total_tax: string; grand_total: string; issue_date: string;
-        customer_snapshot: { identification: string; identificationType?: string };
-        tax_treatment_summary: Array<{ tax_treatment: string; tax_amount: string }>;
-      }>(
-        `SELECT fd.subtotal, fd.total_tax, fd.grand_total, fd.issue_date::text, fd.customer_snapshot,
-                COALESCE(
-                  json_agg(json_build_object('tax_treatment', fdt.tax_treatment, 'tax_amount', fdt.tax_amount))
-                  FILTER (WHERE fdt.id IS NOT NULL), '[]'
-                ) AS tax_treatment_summary
-         FROM fiscal_documents fd
-         LEFT JOIN fiscal_document_taxes fdt ON fdt.document_id = fd.id
-         WHERE fd.id = $1
-         GROUP BY fd.id`,
-        [documentId],
-      );
-
-      const { rows: [settingsRow] } = await tx.query<{
-        nit: string; dian_environment: string; dian_technical_key: string | null;
-      }>(
-        `SELECT nit, dian_environment, dian_technical_key FROM tenant_settings WHERE tenant_id = $1`,
-        [ctx.tenantId],
-      );
-
-      const numFac = `${reserved.prefix ?? ''}${reserved.number}`;
-      const horFac = CufeService.colombiaTime();
-      const nitOfe = (settingsRow?.nit ?? '').replace(/[^0-9]/g, '');
-      const numAdq = (finRow?.customer_snapshot?.identification ?? '').replace(/[^0-9a-zA-Z]/g, '');
-      const tipoAmb: '1' | '2' = settingsRow?.dian_environment === 'PRODUCCION' ? '1' : '2';
-      const sumTreatment = (treatment: string) =>
-        Array.isArray(finRow?.tax_treatment_summary)
-          ? (finRow!.tax_treatment_summary as Array<{ tax_treatment: string; tax_amount: string }>)
-              .filter((t) => t.tax_treatment === treatment)
-              .reduce((a, t) => a + parseFloat(t.tax_amount), 0)
-              .toFixed(2)
-          : '0.00';
-
-      const computedCufe = finRow && nitOfe
-        ? this.cufe.compute({
-            numFac,
-            fecFac: typeof finRow.issue_date === 'string'
-              ? finRow.issue_date
-              : new Date().toISOString().slice(0, 10),
-            horFac,
-            valFac: parseFloat(finRow.subtotal).toFixed(2),
-            valImp01: sumTreatment('TAXED'),   // IVA
-            valImp02: sumTreatment('INC'),     // Impuesto al Consumo
-            valImp03: sumTreatment('ICA'),     // ICA (ext. future)
-            valTot: parseFloat(finRow.grand_total).toFixed(2),
-            nitOfe,
-            numAdq,
-            clTec: settingsRow?.dian_technical_key ?? '',
-            tipoAmb,
-          })
-        : null;
+      // Technical keys are encrypted DIAN credentials and must only be opened by
+      // the asynchronous DIAN worker.  Issuance writes an immutable request;
+      // the worker builds and signs the payload after the transaction commits.
+      const computedCufe: string | null = null;
 
       // Transition → PROCESSING and write outbox atomically
       await tx.query(
@@ -164,7 +107,7 @@ export class IssueDocumentService {
       await tx.query(
         `INSERT INTO document_outbox (tenant_id, document_id, job_type, payload)
          VALUES ($1, $2, 'dian.submit', $3)`,
-        [ctx.tenantId, documentId, JSON.stringify({ requestId: ctx.requestId })],
+        [ctx.tenantId, documentId, JSON.stringify({ schemaVersion: 1, tenantId: ctx.tenantId, requestId: ctx.requestId, entityId: documentId, idempotencyKey: `dian.submit:${ctx.tenantId}:${documentId}`, payload: { documentId } })],
       );
 
       await this.audit.append(tx, {
@@ -174,40 +117,6 @@ export class IssueDocumentService {
         actorId: ctx.userId,
         requestId: ctx.requestId,
         payload: { prefix: reserved.prefix, number: reserved.number },
-      });
-
-      // Process outbox immediately (MockDianProvider is synchronous)
-      const dianResult = await this.dian.submit(documentId);
-      finalStatus = dianResult.outcome === 'ACCEPTED' ? 'ISSUED' : 'REJECTED';
-
-      await tx.query(
-        `UPDATE fiscal_documents
-         SET status = $1,
-             dian_tracking_id = $2,
-             rejection_reason = $3,
-             version = version + 1,
-             updated_at = NOW()
-         WHERE id = $4`,
-        [finalStatus, dianResult.trackingId, dianResult.rejectionReason ?? null, documentId],
-      );
-
-      await tx.query(
-        `UPDATE document_outbox
-         SET status = 'COMPLETED', updated_at = NOW()
-         WHERE document_id = $1 AND job_type = 'dian.submit' AND status = 'IN_FLIGHT'`,
-        [documentId],
-      );
-
-      await this.audit.append(tx, {
-        tenantId: ctx.tenantId,
-        documentId,
-        eventType: `document.${finalStatus.toLowerCase()}`,
-        actorId: ctx.userId,
-        requestId: ctx.requestId,
-        payload: {
-          trackingId: dianResult.trackingId,
-          rejectionReason: dianResult.rejectionReason,
-        },
       });
 
       // Return updated document
@@ -267,22 +176,28 @@ export class IssueDocumentService {
       return result;
     });
 
-    // Post-transaction side effects (fire-and-forget; do not fail the issuance)
-    if (finalStatus === 'ISSUED') {
-      this.accounting?.recordIssuance(ctx, issued).catch((e) =>
-        this.logger.warn(`Accounting failed for ${documentId}: ${String(e)}`),
+    // Provider I/O begins only after the fiscal transaction has committed.
+    await this.processOutbox(ctx);
+    const { rows: [current] } = await withTenant(this.pool, ctx, (tx) => tx.query<{
+      status: DraftDocument['status']; version: number; dian_tracking_id: string | null; rejection_reason: string | null;
+    }>(`SELECT status, version, dian_tracking_id, rejection_reason FROM fiscal_documents WHERE id = $1`, [documentId]));
+    const finalized = current ? { ...issued, status: current.status, version: current.version } : issued;
+
+    if (finalized.status === 'ISSUED') {
+      this.accounting?.recordIssuance(ctx, finalized).catch((error) =>
+        this.logger.warn(`Accounting failed for ${documentId}: ${String(error)}`),
       );
       this.notifications?.dispatch(ctx, 'invoice.issued', documentId, {
-        documentNumber: issued.documentNumber,
-        grandTotal: issued.grandTotal,
-      }).catch((e) => this.logger.warn(`Notification failed: ${String(e)}`));
-    } else {
+        documentNumber: finalized.documentNumber,
+        grandTotal: finalized.grandTotal,
+      }).catch((error) => this.logger.warn(`Notification failed: ${String(error)}`));
+    } else if (finalized.status === 'REJECTED') {
       this.notifications?.dispatch(ctx, 'invoice.rejected', documentId, {
-        documentNumber: issued.documentNumber,
-      }).catch((e) => this.logger.warn(`Notification failed: ${String(e)}`));
+        documentNumber: finalized.documentNumber,
+      }).catch((error) => this.logger.warn(`Notification failed: ${String(error)}`));
     }
 
-    return issued;
+    return finalized;
   }
 
   /**
@@ -305,8 +220,7 @@ export class IssueDocumentService {
     });
 
     for (const job of pending) {
-      await withTenant(this.pool, ctx, async (tx) => {
-        // Check if document already processed (idempotent retry)
+      const claimed = await withTenant(this.pool, ctx, async (tx) => {
         const { rows } = await tx.query<{ status: string; dian_tracking_id: string | null }>(
           `SELECT status, dian_tracking_id FROM fiscal_documents WHERE id = $1`,
           [job.document_id],
@@ -317,18 +231,23 @@ export class IssueDocumentService {
             `UPDATE document_outbox SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1`,
             [job.id],
           );
-          return;
+          return false;
         }
 
-        // Mark in-flight
         await tx.query(
           `UPDATE document_outbox SET status = 'IN_FLIGHT', attempts = attempts + 1, updated_at = NOW() WHERE id = $1`,
           [job.id],
         );
+        return true;
+      });
+      if (!claimed) continue;
 
+      try {
+        // Network I/O is deliberately outside the fiscal database transaction.
         const dianResult = await this.dian.submit(job.document_id);
         const finalStatus = dianResult.outcome === 'ACCEPTED' ? 'ISSUED' : 'REJECTED';
 
+        await withTenant(this.pool, ctx, async (tx) => {
         await tx.query(
           `UPDATE fiscal_documents
            SET status = $1, dian_tracking_id = $2, rejection_reason = $3, version = version + 1, updated_at = NOW()
@@ -348,7 +267,19 @@ export class IssueDocumentService {
           requestId: (typeof job.payload === 'string' ? JSON.parse(job.payload) : job.payload as { requestId?: string }).requestId,
           payload: { trackingId: dianResult.trackingId },
         });
-      });
+        });
+      } catch (error) {
+        await withTenant(this.pool, ctx, (tx) => tx.query(
+          `UPDATE document_outbox
+           SET status = CASE WHEN attempts >= max_attempts THEN 'DEAD' ELSE 'PENDING' END,
+               error = $2,
+               next_attempt = NOW() + INTERVAL '30 seconds',
+               updated_at = NOW()
+           WHERE id = $1`,
+          [job.id, error instanceof Error ? error.message : String(error)],
+        ));
+        throw error;
+      }
       processed++;
     }
 

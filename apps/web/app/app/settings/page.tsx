@@ -113,18 +113,24 @@ export default function SettingsPage() {
 
   async function saveDian() {
     if (!dianForm.pfx || !dianForm.chain) throw new Error('Selecciona el PFX y la cadena de certificados');
-    const [pfxBase64, caChainBase64] = await Promise.all([fileBase64(dianForm.pfx), fileBase64(dianForm.chain)]);
+    const payload = new FormData();
+    payload.set('pfx', dianForm.pfx);
+    payload.set('caChain', dianForm.chain);
+    payload.set('password', dianForm.password);
+    payload.set('softwareId', dianForm.softwareId);
+    payload.set('softwarePin', dianForm.pin);
+    payload.set('technicalKey', dianForm.technicalKey);
+    payload.set('testSetId', dianForm.testSetId);
+    payload.set('invoiceAuthorization', dianForm.invoiceAuthorization);
+    payload.set('authorizationPrefix', dianForm.authorizationPrefix);
+    payload.set('authorizationFrom', dianForm.authorizationFrom);
+    payload.set('authorizationTo', dianForm.authorizationTo);
+    payload.set('authorizationStartDate', dianForm.authorizationStartDate);
+    payload.set('authorizationEndDate', dianForm.authorizationEndDate);
     const res = await fetch(`${API_URL}/settings/dian/credentials`, {
       method: 'PUT',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        pfxBase64, caChainBase64, password: dianForm.password, softwareId: dianForm.softwareId,
-        softwarePin: dianForm.pin, technicalKey: dianForm.technicalKey, testSetId: dianForm.testSetId,
-        invoiceAuthorization: dianForm.invoiceAuthorization, authorizationPrefix: dianForm.authorizationPrefix,
-        authorizationFrom: dianForm.authorizationFrom, authorizationTo: dianForm.authorizationTo,
-        authorizationStartDate: dianForm.authorizationStartDate, authorizationEndDate: dianForm.authorizationEndDate,
-      }),
+      body: payload,
     });
     if (!res.ok) throw new Error('Error al guardar la configuración DIAN');
     const status = await res.json() as DianStatus;
@@ -318,10 +324,4 @@ export default function SettingsPage() {
       />
     </main>
   );
-}
-
-async function fileBase64(file: File): Promise<string> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
 }
