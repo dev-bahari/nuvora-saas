@@ -5,7 +5,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/ToastProvider';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { dianReadiness } from './dian-status.js';
+import { dianReadiness } from './dian-status';
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 

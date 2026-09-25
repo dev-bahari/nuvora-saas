@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dianReadiness } from './dian-status.js';
+import { dianReadiness } from './dian-status';
 
 describe('dianReadiness', () => {
   it('describes READY credentials without claiming DIAN approval', () => {
